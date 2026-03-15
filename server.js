@@ -294,10 +294,13 @@ io.on("connection", (socket) => {
     const q = room.questions[room.currentIndex];
     if (!q) return;
     room.answersThisRound[socket.id] = answer;
-    if (answer.toLowerCase() === q.correct.toLowerCase()) {
+    const correct = answer.toLowerCase() === q.correct.toLowerCase();
+    if (correct) {
       const p = room.players.find(pl => pl.name === player);
       if (p) p.score += 1;
     }
+    // Tell the player whether they got it right and what their new score is
+    socket.emit("answer-result", { correct, newScore: room.players.find(pl => pl.name === player)?.score || 0 });
     checkAllAnswered(pin);
   });
 
