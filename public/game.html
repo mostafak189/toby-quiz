@@ -1,349 +1,352 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const sqlite3 = require("sqlite3").verbose();
-const bodyParser = require("body-parser");
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-const port = process.env.PORT || 3000;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-app.use(bodyParser.json());
-app.use(express.static("public"));
-
-// --- Database setup ---
-const db = new sqlite3.Database("./quiz.db", (err) => {
-  if (err) return console.error(err.message);
-  console.log("Connected to SQLite database.");
-});
-
-db.serialize(() => {
-  db.run(`PRAGMA foreign_keys = ON`);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS eras (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL
-    )
-  `);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS questions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      era_id INTEGER NOT NULL,
-      text TEXT NOT NULL,
-      option_a TEXT NOT NULL,
-      option_b TEXT NOT NULL,
-      option_c TEXT NOT NULL,
-      option_d TEXT NOT NULL,
-      correct TEXT NOT NULL DEFAULT 'A',
-      FOREIGN KEY (era_id) REFERENCES eras(id) ON DELETE CASCADE
-    )
-  `);
-});
-
-// --- ERAS ---
-app.get("/eras", (req, res) => {
-  db.all("SELECT * FROM eras ORDER BY id ASC", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-app.post("/eras", (req, res) => {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: "Name required" });
-  db.run("INSERT INTO eras (name) VALUES (?)", [name], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, name });
-  });
-});
-
-app.delete("/eras/:id", (req, res) => {
-  const { id } = req.params;
-  db.run("PRAGMA foreign_keys = ON", () => {
-    db.run("DELETE FROM eras WHERE id = ?", [id], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ deleted: this.changes });
-    });
-  });
-});
-
-// --- QUESTIONS ---
-app.get("/questions/:eraId", (req, res) => {
-  const eraId = parseInt(req.params.eraId);
-  let sql = "SELECT q.*, e.name as era_name FROM questions q JOIN eras e ON q.era_id = e.id";
-  const params = [];
-  if (eraId > 0) { sql += " WHERE q.era_id = ?"; params.push(eraId); }
-  sql += " ORDER BY q.id ASC";
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-app.post("/questions", (req, res) => {
-  const { era_id, text, option_a, option_b, option_c, option_d, correct } = req.body;
-  if (!era_id || !text || !option_a || !option_b || !option_c || !option_d || !correct)
-    return res.status(400).json({ error: "All fields required" });
-  db.run(
-    `INSERT INTO questions (era_id, text, option_a, option_b, option_c, option_d, correct) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [era_id, text, option_a, option_b, option_c, option_d, correct],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID, era_id, text, option_a, option_b, option_c, option_d, correct });
-    }
-  );
-});
-
-app.put("/questions/:id", (req, res) => {
-  const { id } = req.params;
-  const { era_id, text, option_a, option_b, option_c, option_d, correct } = req.body;
-  if (!text || !option_a || !option_b || !option_c || !option_d || !correct)
-    return res.status(400).json({ error: "All fields required" });
-  db.run(
-    `UPDATE questions SET era_id=?, text=?, option_a=?, option_b=?, option_c=?, option_d=?, correct=? WHERE id=?`,
-    [era_id, text, option_a, option_b, option_c, option_d, correct, id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ updated: this.changes });
-    }
-  );
-});
-
-app.delete("/questions/:id", (req, res) => {
-  const { id } = req.params;
-  db.run("DELETE FROM questions WHERE id = ?", [id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ deleted: this.changes });
-  });
-});
-
-// -----------------------------------------------
-// GAME STATE
-// -----------------------------------------------
-// rooms[pin] = {
-//   hostSocketId,
-//   players: [ { socketId, name, avatar, score } ],
-//   questions: [],
-//   currentIndex: -1,
-//   era: null,
-//   answersThisRound: {},   // socketId -> answer
-//   timerHandle: null,
-//   started: false
-// }
-const rooms = {};
-
-function getRoom(pin) {
-  if (!rooms[pin]) {
-    rooms[pin] = {
-      hostSocketId: null,
-      players: [],
-      questions: [],
-      currentIndex: -1,
-      era: null,
-      answersThisRound: {},
-      timerHandle: null,
-      started: false
-    };
+  body {
+    background: #000;
+    color: #ff2222;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    overflow-x: hidden;
   }
-  return rooms[pin];
-}
 
-function broadcastPlayers(pin) {
-  const room = rooms[pin];
-  if (!room) return;
-  io.to(pin).emit("update-players", room.players.map(p => ({ name: p.name, avatar: p.avatar, score: p.score })));
-}
-
-function sendQuestion(pin) {
-  const room = rooms[pin];
-  if (!room) return;
-  if (room.currentIndex >= room.questions.length) {
-    endGame(pin);
-    return;
+  /* WAIT SCREEN */
+  #waitScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    min-height: 80vh;
+    text-align: center;
+    padding: 20px;
   }
-  const q = room.questions[room.currentIndex];
-  room.answersThisRound = {};
+  #waitAvatar { font-size: 4rem; }
+  #waitScreen h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(0.9rem, 3vw, 1.2rem);
+    letter-spacing: 3px;
+    color: #ff2222;
+    animation: pulse 1.5s infinite;
+  }
+  #waitScreen p { color: #440000; font-size: 13px; }
+  .dots span { display: inline-block; animation: bounce 1.2s infinite; }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  io.to(pin).emit("next-question", {
-    questionNumber: room.currentIndex + 1,
-    totalQuestions: room.questions.length,
-    question_text: q.text,
-    a: q.option_a,
-    b: q.option_b,
-    c: q.option_c,
-    d: q.option_d,
-    time: 30
-  });
+  /* GAME AREA */
+  #gameArea {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 900px;
+  }
 
-  // Auto-advance after 30s
-  if (room.timerHandle) clearTimeout(room.timerHandle);
-  room.timerHandle = setTimeout(() => {
-    advanceQuestion(pin);
-  }, 31000);
+  .top-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .q-counter {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #660000;
+  }
+  #score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    color: #ff5555;
+    letter-spacing: 1px;
+  }
+
+  .timer-wrap {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+  }
+  .timer-svg { transform: rotate(-90deg); display: block; }
+  .timer-bg  { fill: none; stroke: #1a0000; stroke-width: 6; }
+  .timer-ring {
+    fill: none;
+    stroke: #ff2222;
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.5s;
+  }
+  .timer-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    color: #fff;
+    text-shadow: 0 0 10px #ff2222;
+  }
+
+  #question {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    text-align: center;
+    color: #fff;
+    max-width: 800px;
+    line-height: 1.5;
+    margin-bottom: 28px;
+    padding: 20px 24px;
+    background: #0a0000;
+    border: 1px solid #220000;
+    border-radius: 12px;
+    width: 100%;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #answers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 20px;
+  }
+  .answer-card {
+    padding: 20px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(12px, 2.5vw, 16px);
+    font-weight: 700;
+    transition: transform 0.15s, box-shadow 0.15s;
+    text-align: center;
+    color: #000;
+    position: relative;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .answer-card::before {
+    content: attr(data-letter);
+    position: absolute;
+    top: 8px; left: 12px;
+    font-size: 11px;
+    opacity: 0.6;
+  }
+  .answer-card:hover {
+    transform: scale(1.04);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  }
+  .answer-card.host {
+    cursor: default;
+    background: #0f0000 !important;
+    color: #ff5555 !important;
+    border: 2px solid #330000 !important;
+  }
+  .answer-card.host:hover { transform: none; box-shadow: none; }
+
+  #submittedMsg {
+    display: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    text-align: center;
+    color: #22cc55;
+    padding: 20px;
+    animation: popIn 0.3s ease;
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  #hostNextBtn {
+    display: none;
+    padding: 12px 28px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    background: #000;
+    color: #ff2222;
+    border: 2px solid #ff2222;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  #hostNextBtn:hover { background: #ff2222; color: #000; }
+
+  @media (max-width: 500px) {
+    #answers { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="waitScreen">
+  <div id="waitAvatar"></div>
+  <h2>WAITING FOR GAME TO START<span class="dots"><span>.</span><span>.</span><span>.</span></span></h2>
+  <p>The host will start the game shortly</p>
+</div>
+
+<div id="gameArea">
+  <div class="top-bar">
+    <div class="q-counter">QUESTION <span id="qNum">-</span> / <span id="qTotal">-</span></div>
+    <div id="score"></div>
+  </div>
+  <div class="timer-wrap">
+    <svg class="timer-svg" viewBox="0 0 80 80" width="80" height="80">
+      <circle class="timer-bg"  cx="40" cy="40" r="35"/>
+      <circle class="timer-ring" id="timerRing" cx="40" cy="40" r="35"/>
+    </svg>
+    <div class="timer-text" id="timerText">30</div>
+  </div>
+  <div id="question">Loading question...</div>
+  <div id="answers"></div>
+  <div id="submittedMsg">✓ ANSWER SUBMITTED!</div>
+  <button id="hostNextBtn">⏭ NEXT QUESTION</button>
+</div>
+
+<script>
+const socket      = io();
+const params      = new URLSearchParams(window.location.search);
+const pin         = params.get("pin");
+const isHost      = params.get("host") === "true";
+const playerName  = localStorage.getItem("playerName")   || "Player";
+const playerAvatar= localStorage.getItem("playerAvatar") || "🎉";
+
+// DOM
+const waitScreen  = document.getElementById("waitScreen");
+const waitAvatar  = document.getElementById("waitAvatar");
+const gameArea    = document.getElementById("gameArea");
+const qEl         = document.getElementById("question");
+const aEl         = document.getElementById("answers");
+const timerText   = document.getElementById("timerText");
+const timerRing   = document.getElementById("timerRing");
+const scoreEl     = document.getElementById("score");
+const submittedMsg= document.getElementById("submittedMsg");
+const hostNextBtn = document.getElementById("hostNextBtn");
+const qNumEl      = document.getElementById("qNum");
+const qTotalEl    = document.getElementById("qTotal");
+
+waitAvatar.textContent = isHost ? "🎮" : playerAvatar;
+if (isHost) hostNextBtn.style.display = "inline-block";
+
+const CIRCUMFERENCE = 2 * Math.PI * 35;
+timerRing.style.strokeDasharray  = CIRCUMFERENCE;
+timerRing.style.strokeDashoffset = 0;
+
+let score       = 0;
+let timerHandle = null;
+let answered    = false;
+const COLORS    = ["#e74c3c", "#f39c12", "#2ecc71", "#3498db"];
+const LETTERS   = ["A", "B", "C", "D"];
+
+function showGame() {
+  waitScreen.style.display = "none";
+  gameArea.style.display   = "flex";
 }
 
-function advanceQuestion(pin) {
-  const room = rooms[pin];
-  if (!room) return;
-  if (room.timerHandle) { clearTimeout(room.timerHandle); room.timerHandle = null; }
-  room.currentIndex++;
-  if (room.currentIndex >= room.questions.length) {
-    endGame(pin);
+function startTimer(duration) {
+  clearInterval(timerHandle);
+  let t = duration;
+  timerText.textContent            = t;
+  timerRing.style.strokeDashoffset = 0;
+  timerRing.style.stroke           = "#ff2222";
+
+  timerHandle = setInterval(() => {
+    t--;
+    timerText.textContent            = Math.max(t, 0);
+    timerRing.style.strokeDashoffset = CIRCUMFERENCE * (1 - t / duration);
+    if (t <= 5) timerRing.style.stroke = "#ff6600";
+    if (t <= 0) {
+      clearInterval(timerHandle);
+      if (isHost) socket.emit("next-question", pin);
+    }
+  }, 1000);
+}
+
+// Emit joins AFTER socket connects so socket.id is guaranteed to exist
+socket.on("connect", () => {
+  if (isHost) {
+    socket.emit("host-join", pin);
   } else {
-    sendQuestion(pin);
+    socket.emit("player-join", { pin, name: playerName, avatar: playerAvatar });
   }
-}
+  socket.emit("request-current-question", pin);
+});
 
-function checkAllAnswered(pin) {
-  const room = rooms[pin];
-  if (!room || room.players.length === 0) return;
-  const answered = Object.keys(room.answersThisRound).length;
-  if (answered >= room.players.length) {
-    // Small delay so last player can see their submission
-    if (room.timerHandle) clearTimeout(room.timerHandle);
-    room.timerHandle = setTimeout(() => advanceQuestion(pin), 1500);
+socket.on("next-question", q => {
+  showGame();
+  answered = false;
+  submittedMsg.style.display = "none";
+  aEl.style.opacity          = "1";
+
+  qNumEl.textContent  = q.questionNumber  || "-";
+  qTotalEl.textContent= q.totalQuestions  || "-";
+  qEl.textContent     = q.question_text;
+
+  if (!isHost) {
+    scoreEl.textContent = playerAvatar + " " + playerName + "  ·  SCORE: " + score;
   }
-}
 
-function endGame(pin) {
-  const room = rooms[pin];
-  if (!room) return;
-  if (room.timerHandle) { clearTimeout(room.timerHandle); room.timerHandle = null; }
+  aEl.innerHTML = "";
+  ["a","b","c","d"].forEach((key, i) => {
+    const card          = document.createElement("div");
+    card.className      = "answer-card" + (isHost ? " host" : "");
+    card.dataset.letter = LETTERS[i];
+    card.textContent    = q[key];
 
-  const sorted = [...room.players].sort((a, b) => b.score - a.score);
-  const results = sorted.map((p, i) => ({ rank: i + 1, name: p.name, avatar: p.avatar, score: p.score }));
-  io.to(pin).emit("game-finished", results);
-}
-
-// -----------------------------------------------
-// SOCKET.IO
-// -----------------------------------------------
-io.on("connection", (socket) => {
-  console.log("Socket connected:", socket.id);
-
-  // Host creates/joins a room
-  socket.on("host-join", (pin) => {
-    const room = getRoom(pin);
-    room.hostSocketId = socket.id;
-    socket.join(pin);
-    broadcastPlayers(pin);
-    console.log(`Host joined room ${pin}`);
-  });
-
-  // Player joins
-  socket.on("player-join", ({ pin, name, avatar }) => {
-    const room = getRoom(pin);
-    // Prevent duplicate names — update socketId if reconnecting
-    const existing = room.players.find(p => p.name === name);
-    if (existing) {
-      existing.socketId = socket.id;
-      existing.avatar = avatar; // update avatar in case
+    if (isHost) {
+      card.style.borderColor = COLORS[i] + "99";
+      card.style.color       = COLORS[i];
     } else {
-      room.players.push({ socketId: socket.id, name, avatar, score: 0 });
+      card.style.background = COLORS[i];
+      card.onclick = () => {
+        if (answered) return;
+        answered = true;
+        socket.emit("submit-answer", { pin, player: playerName, answer: key });
+        setTimeout(() => {
+          aEl.style.opacity          = "0.35";
+          submittedMsg.style.display = "block";
+        }, 200);
+      };
     }
-    socket.join(pin);
-    socket.data.pin = pin;
-    socket.data.name = name;
-    broadcastPlayers(pin);
-    console.log(`Player ${name} joined room ${pin}`);
-
-    // If game already started, immediately send the current question to this socket
-    if (room.started && room.currentIndex >= 0 && room.currentIndex < room.questions.length) {
-      const q = room.questions[room.currentIndex];
-      socket.emit("next-question", {
-        questionNumber: room.currentIndex + 1,
-        totalQuestions: room.questions.length,
-        question_text: q.text,
-        a: q.option_a,
-        b: q.option_b,
-        c: q.option_c,
-        d: q.option_d,
-        time: 30
-      });
-    }
+    aEl.appendChild(card);
   });
 
-  // Host selects era and starts game
-  socket.on("select-era", ({ pin, era }) => {
-    const room = getRoom(pin);
-    room.era = era;
-    console.log(`Era selected for ${pin}: ${era}`);
-
-    db.all("SELECT q.* FROM questions q JOIN eras e ON q.era_id = e.id WHERE e.name = ? ORDER BY RANDOM()", [era], (err, rows) => {
-      if (err) { console.error(err); return; }
-      room.questions = rows;
-      room.currentIndex = 0;
-      room.started = true;
-      console.log(`Loaded ${rows.length} questions for era ${era} in room ${pin}`);
-      sendQuestion(pin);
-    });
-  });
-
-  // Player submits answer
-  socket.on("submit-answer", ({ pin, player, answer }) => {
-    const room = rooms[pin];
-    if (!room || !room.started) return;
-
-    const q = room.questions[room.currentIndex];
-    if (!q) return;
-
-    // Record answer
-    room.answersThisRound[socket.id] = answer;
-
-    // Check correctness
-    if (answer.toLowerCase() === q.correct.toLowerCase()) {
-      const p = room.players.find(pl => pl.name === player);
-      if (p) p.score += 1;
-    }
-
-    checkAllAnswered(pin);
-  });
-
-  // Manual next question (host button)
-  socket.on("next-question", (pin) => {
-    advanceQuestion(pin);
-  });
-
-  // Late joiner requests current question
-  socket.on("request-current-question", (pin) => {
-    const room = rooms[pin];
-    if (!room || !room.started || room.currentIndex < 0 || room.currentIndex >= room.questions.length) return;
-    const q = room.questions[room.currentIndex];
-    socket.emit("next-question", {
-      questionNumber: room.currentIndex + 1,
-      totalQuestions: room.questions.length,
-      question_text: q.text,
-      a: q.option_a,
-      b: q.option_b,
-      c: q.option_c,
-      d: q.option_d,
-      time: 30
-    });
-  });
-
-  // Reset game
-  socket.on("reset-game", (pin) => {
-    const room = rooms[pin];
-    if (!room) return;
-    if (room.timerHandle) clearTimeout(room.timerHandle);
-    room.players = [];
-    room.questions = [];
-    room.currentIndex = -1;
-    room.answersThisRound = {};
-    room.started = false;
-    room.timerHandle = null;
-    broadcastPlayers(pin);
-  });
-
-  socket.on("disconnect", () => {
-    const pin = socket.data.pin;
-    if (pin && rooms[pin]) {
-      // Don't remove player on disconnect (they may reconnect)
-      console.log(`Socket ${socket.id} disconnected from room ${pin}`);
-    }
-  });
+  startTimer(q.time || 30);
 });
 
-server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+socket.on("game-finished", results => {
+  clearInterval(timerHandle);
+  window.location.href = "/results.html"
+    + "?data="   + encodeURIComponent(JSON.stringify(results))
+    + "&name="   + encodeURIComponent(playerName)
+    + "&avatar=" + encodeURIComponent(playerAvatar)
+    + "&score="  + score;
 });
+
+hostNextBtn.onclick = () => socket.emit("next-question", pin);
+</script>
+</body>
+</html>
