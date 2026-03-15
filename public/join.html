@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Join Game</title>
-<script src="/socket.io/socket.io.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -120,7 +119,6 @@
 </div>
 
 <script>
-const socket = io();
 const avatars = ["🎉","🎂","🎁","🕺","💃","🦄","🔥","⚡","🎯","🏆"];
 const avatarRow = document.getElementById("avatarRow");
 let selectedAvatar = "🎉";
@@ -156,8 +154,9 @@ function joinGame() {
   errorEl.textContent = "";
   localStorage.setItem("playerName", name);
   localStorage.setItem("playerAvatar", selectedAvatar);
+  localStorage.setItem("gamePin", pinValue);
 
-  socket.emit("player-join", { pin: pinValue, name, avatar: selectedAvatar });
+  // Navigate — game.html will emit player-join with its own fresh socket
   window.location.href = `/game.html?pin=${pinValue}`;
 }
 </script>
