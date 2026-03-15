@@ -52,6 +52,34 @@
   ::-webkit-scrollbar-track { background: #0a0a0a; }
   ::-webkit-scrollbar-thumb { background: #440000; border-radius: 3px; }
 
+  /* CLEAR DB */
+  .btn-danger { border-color: #ff6600; color: #ff6600; }
+  .btn-danger:hover { background: #ff6600; color: #000; }
+
+  /* MODAL */
+  #modalOverlay {
+    display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.85); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  #modalOverlay.active { display: flex; }
+  #modalBox {
+    background: #0f0000; border: 2px solid #ff6600; border-radius: 12px;
+    padding: 32px 28px; width: 100%; max-width: 360px; text-align: center;
+    box-shadow: 0 0 40px #ff660033; animation: popIn 0.25s ease;
+  }
+  @keyframes popIn { from { transform: scale(0.85); opacity:0; } to { transform: scale(1); opacity:1; } }
+  #modalBox h3 { font-family: 'Orbitron', sans-serif; font-size: 1rem; letter-spacing: 3px; color: #ff6600; margin-bottom: 8px; }
+  #modalBox p { font-size: 12px; color: #884400; margin-bottom: 20px; line-height: 1.6; }
+  #modalPassword {
+    width: 100%; padding: 11px 14px; background: #1a0000; color: #ff2222;
+    border: 1px solid #440000; border-radius: 6px; font-family: 'Share Tech Mono', monospace;
+    font-size: 16px; text-align: center; margin-bottom: 16px; letter-spacing: 2px;
+  }
+  #modalPassword:focus { outline: none; border-color: #ff6600; box-shadow: 0 0 10px #ff660033; }
+  #modalStatus { min-height: 18px; font-size: 12px; margin-bottom: 14px; }
+  .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
   @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
   }
@@ -60,6 +88,24 @@
 <body>
 
 <h1>⚙ ADMIN PANEL</h1>
+
+<div style="text-align:right;margin-bottom:10px;">
+  <button class="btn btn-danger" onclick="openClearModal()">⚠ Clear Database</button>
+</div>
+
+<!-- CLEAR DATABASE MODAL -->
+<div id="modalOverlay">
+  <div id="modalBox">
+    <h3>⚠ CLEAR DATABASE</h3>
+    <p>This will permanently delete ALL eras and questions from the database. This cannot be undone.</p>
+    <input type="password" id="modalPassword" placeholder="Enter admin password">
+    <div id="modalStatus"></div>
+    <div class="modal-btns">
+      <button class="btn btn-danger" onclick="confirmClear()">Delete Everything</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <h2>MANAGE ERAS</h2>
 <div id="eraList">Loading...</div>
@@ -250,7 +296,65 @@ init();
 document.addEventListener("DOMContentLoaded", () => {
   const eraInput = document.getElementById("eraNameInput");
   if (eraInput) eraInput.addEventListener("keydown", e => { if (e.key === "Enter") addEra(); });
+  document.getElementById("modalPassword").addEventListener("keydown", e => { if (e.key === "Enter") confirmClear(); });
 });
+
+// --- CLEAR DATABASE ---
+function openClearModal() {
+  document.getElementById("modalPassword").value = "";
+  document.getElementById("modalStatus").textContent = "";
+  document.getElementById("modalStatus").style.color = "#ff6600";
+  document.getElementById("modalOverlay").classList.add("active");
+  setTimeout(() => document.getElementById("modalPassword").focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById("modalOverlay").classList.remove("active");
+}
+
+// Close modal if overlay background clicked
+document.getElementById("modalOverlay").addEventListener("click", function(e) {
+  if (e.target === this) closeModal();
+});
+
+async function confirmClear() {
+  const pwd = document.getElementById("modalPassword").value;
+  const statusEl = document.getElementById("modalStatus");
+
+  if (pwd !== "HappyBirthdayToby") {
+    statusEl.style.color = "#ff2222";
+    statusEl.textContent = "Incorrect password.";
+    document.getElementById("modalPassword").value = "";
+    document.getElementById("modalPassword").focus();
+    return;
+  }
+
+  statusEl.style.color = "#ff6600";
+  statusEl.textContent = "Clearing...";
+
+  try {
+    const res = await fetch("/clear-database", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd })
+    });
+    const data = await res.json();
+    if (data.success) {
+      statusEl.style.color = "#22cc55";
+      statusEl.textContent = "Database cleared successfully.";
+      setTimeout(() => {
+        closeModal();
+        init();
+      }, 1200);
+    } else {
+      statusEl.style.color = "#ff2222";
+      statusEl.textContent = data.error || "Failed to clear database.";
+    }
+  } catch (err) {
+    statusEl.style.color = "#ff2222";
+    statusEl.textContent = "Network error. Try again.";
+  }
+}
 </script>
 </body>
 </html>
