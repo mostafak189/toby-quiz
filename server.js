@@ -118,6 +118,23 @@ app.delete("/questions/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- CLEAR DATABASE ---
+app.post("/clear-database", async (req, res) => {
+  const { password } = req.body;
+  if (password !== "HappyBirthdayToby")
+    return res.status(403).json({ error: "Incorrect password." });
+  try {
+    await db.execute("DELETE FROM questions");
+    await db.execute("DELETE FROM eras");
+    // Reset autoincrement counters
+    await db.execute("DELETE FROM sqlite_sequence WHERE name='questions'");
+    await db.execute("DELETE FROM sqlite_sequence WHERE name='eras'");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // -----------------------------------------------
 // GAME STATE
 // -----------------------------------------------
