@@ -343,7 +343,9 @@ socket.on("game-finished", results => {
     + "?data="   + encodeURIComponent(JSON.stringify(results))
     + "&name="   + encodeURIComponent(playerName)
     + "&avatar=" + encodeURIComponent(playerAvatar)
-    + "&score="  + score;
+    + "&score="  + score
+    + "&pin="    + encodeURIComponent(pin)
+    + "&host="   + (isHost ? "true" : "false");
 });
 
 hostNextBtn.onclick = () => socket.emit("next-question", pin);
