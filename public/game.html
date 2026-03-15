@@ -266,23 +266,29 @@ function showGame() {
   gameArea.style.display   = "flex";
 }
 
-function startTimer(duration) {
+function startTimer(duration, startedAt) {
   clearInterval(timerHandle);
-  let t = duration;
-  timerText.textContent            = t;
-  timerRing.style.strokeDashoffset = 0;
-  timerRing.style.stroke           = "#ff2222";
+  timerRing.style.stroke = "#ff2222";
 
-  timerHandle = setInterval(() => {
-    t--;
-    timerText.textContent            = Math.max(t, 0);
+  function tick() {
+    // Calculate remaining time from server timestamp — stays in sync even if tab was backgrounded
+    const elapsed = (Date.now() - startedAt) / 1000;
+    const t       = Math.max(duration - elapsed, 0);
+    const display = Math.ceil(t);
+
+    timerText.textContent            = display;
     timerRing.style.strokeDashoffset = CIRCUMFERENCE * (1 - t / duration);
-    if (t <= 5) timerRing.style.stroke = "#ff6600";
+    if (t <= 5)  timerRing.style.stroke = "#ff6600";
     if (t <= 0) {
       clearInterval(timerHandle);
+      timerText.textContent = "0";
       if (isHost) socket.emit("next-question", pin);
+      return;
     }
-  }, 1000);
+  }
+
+  tick(); // run immediately so there's no 1s delay on first render
+  timerHandle = setInterval(tick, 250); // poll 4x/sec so it snaps back instantly after backgrounding
 }
 
 // Emit joins AFTER socket connects so socket.id is guaranteed to exist
@@ -334,7 +340,7 @@ socket.on("next-question", q => {
     aEl.appendChild(card);
   });
 
-  startTimer(q.time || 30);
+  startTimer(q.duration || 30, q.startedAt || Date.now());
 });
 
 socket.on("game-finished", results => {
