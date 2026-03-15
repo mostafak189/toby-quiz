@@ -4,69 +4,162 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Join Game</title>
-<link rel="stylesheet" href="style.css">
+<script src="/socket.io/socket.io.js"></script>
 <style>
-body { background:black; color:red; font-family:Arial,sans-serif; text-align:center; padding:20px; margin:0;}
-input, select, button { margin:10px auto; padding:12px; font-size:18px; color:red; background:black; border:2px solid red; border-radius:8px; display:block; width:300px; max-width:90%; box-sizing:border-box; text-align:center; cursor:pointer;}
-h1,h2 { margin-bottom:15px;}
-@media (max-width:500px){input, select, button{font-size:16px;padding:10px;}}
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #000;
+    color: #ff2222;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.1rem, 4vw, 1.8rem);
+    letter-spacing: 3px;
+    text-align: center;
+    text-shadow: 0 0 20px #ff2222;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: #660000; font-size: 12px; letter-spacing: 2px; margin-bottom: 36px; text-align: center; }
+
+  .form-card {
+    background: #0a0000;
+    border: 1px solid #330000;
+    border-radius: 14px;
+    padding: 30px 28px;
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  label { font-size: 11px; letter-spacing: 2px; color: #880000; display: block; margin-bottom: 5px; }
+  input, select {
+    width: 100%;
+    padding: 12px 16px;
+    background: #0f0000;
+    color: #ff2222;
+    border: 1px solid #440000;
+    border-radius: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus { outline: none; border-color: #ff2222; box-shadow: 0 0 10px #ff222222; }
+  input::placeholder { color: #440000; }
+  input[readonly] { color: #ff5555; border-color: #330000; }
+
+  .avatar-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .avatar-opt {
+    width: 50px; height: 50px;
+    border: 2px solid #330000;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #0f0000;
+  }
+  .avatar-opt:hover { border-color: #ff2222; transform: scale(1.1); }
+  .avatar-opt.selected { border-color: #ff2222; background: #1a0000; box-shadow: 0 0 12px #ff222244; }
+
+  .btn-join {
+    padding: 14px;
+    background: #ff2222;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 6px;
+  }
+  .btn-join:hover { background: #fff; box-shadow: 0 0 20px #ff222299; }
+  .btn-join:active { transform: scale(0.97); }
+
+  .error { color: #ff5555; font-size: 12px; text-align: center; min-height: 18px; }
 </style>
 </head>
 <body>
 
-<h1>Join Toby's Birthday Game</h1>
+<h1>🎮 JOIN THE GAME</h1>
+<p class="subtitle">TOBY'S BIRTHDAY QUIZ</p>
 
-<label for="playerName">Enter your name:</label>
-<input type="text" id="playerName" placeholder="Your Name">
+<div class="form-card">
+  <div>
+    <label>YOUR NAME</label>
+    <input type="text" id="playerName" placeholder="Enter your name..." maxlength="20" autocomplete="off">
+  </div>
 
-<label for="avatarSelect">Select your avatar:</label>
-<select id="avatarSelect">
-  <option value="🎉">🎉</option>
-  <option value="🎂">🎂</option>
-  <option value="🎁">🎁</option>
-  <option value="🕺">🕺</option>
-  <option value="💃">💃</option>
-</select>
+  <div>
+    <label>CHOOSE AVATAR</label>
+    <div class="avatar-row" id="avatarRow"></div>
+    <input type="hidden" id="avatarValue" value="🎉">
+  </div>
 
-<label for="gamePinInput">Enter Game PIN:</label>
-<input type="text" id="gamePinInput" placeholder="Game PIN" readonly>
+  <div>
+    <label>GAME PIN</label>
+    <input type="text" id="gamePinInput" placeholder="Game PIN" readonly>
+  </div>
 
-<button id="joinBtn">Join Game</button>
+  <p class="error" id="errorMsg"></p>
+  <button class="btn-join" id="joinBtn">JOIN GAME</button>
+</div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
+const avatars = ["🎉","🎂","🎁","🕺","💃","🦄","🔥","⚡","🎯","🏆"];
+const avatarRow = document.getElementById("avatarRow");
+let selectedAvatar = "🎉";
 
-const joinBtn = document.getElementById("joinBtn");
-const playerNameInput = document.getElementById("playerName");
-const avatarSelect = document.getElementById("avatarSelect");
-const gamePinInput = document.getElementById("gamePinInput");
+avatars.forEach(av => {
+  const d = document.createElement("div");
+  d.className = "avatar-opt" + (av === selectedAvatar ? " selected" : "");
+  d.textContent = av;
+  d.onclick = () => {
+    document.querySelectorAll(".avatar-opt").forEach(el => el.classList.remove("selected"));
+    d.classList.add("selected");
+    selectedAvatar = av;
+  };
+  avatarRow.appendChild(d);
+});
 
-// Get PIN from URL if present
+// Pre-fill pin from URL
 const params = new URLSearchParams(window.location.search);
 const pin = params.get("pin");
-if(pin) gamePinInput.value = pin;
+if (pin) document.getElementById("gamePinInput").value = pin;
 
-joinBtn.onclick = () => {
-  const name = playerNameInput.value.trim();
-  const avatar = avatarSelect.value;
-  const pinValue = gamePinInput.value.trim();
+document.getElementById("joinBtn").onclick = joinGame;
+document.getElementById("playerName").addEventListener("keydown", e => { if (e.key === "Enter") joinGame(); });
 
-  if(!name || !pinValue){
-    alert("Please enter name and PIN");
-    return;
-  }
+function joinGame() {
+  const name = document.getElementById("playerName").value.trim();
+  const pinValue = document.getElementById("gamePinInput").value.trim();
+  const errorEl = document.getElementById("errorMsg");
 
-  // store player info locally
+  if (!name) { errorEl.textContent = "Please enter your name."; return; }
+  if (!pinValue) { errorEl.textContent = "Game PIN is missing."; return; }
+
+  errorEl.textContent = "";
   localStorage.setItem("playerName", name);
+  localStorage.setItem("playerAvatar", selectedAvatar);
 
-  // emit join event to server
-  socket.emit("player-join", { pin: pinValue, name, avatar });
-
-  // redirect to game page as player
-  window.location.href = `/game.html?pin=${pinValue}&host=false`;
-};
+  socket.emit("player-join", { pin: pinValue, name, avatar: selectedAvatar });
+  window.location.href = `/game.html?pin=${pinValue}`;
+}
 </script>
-
 </body>
 </html>
