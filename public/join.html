@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join Game</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { background:black; color:red; font-family:Arial,sans-serif; text-align:center; padding:20px; margin:0;}
+input, select, button { margin:10px auto; padding:12px; font-size:18px; color:red; background:black; border:2px solid red; border-radius:8px; display:block; width:300px; max-width:90%; box-sizing:border-box; text-align:center; cursor:pointer;}
+h1,h2 { margin-bottom:15px;}
+@media (max-width:500px){input, select, button{font-size:16px;padding:10px;}}
+</style>
+</head>
+<body>
+
+<h1>Join Toby's Birthday Game</h1>
+
+<label for="playerName">Enter your name:</label>
+<input type="text" id="playerName" placeholder="Your Name">
+
+<label for="avatarSelect">Select your avatar:</label>
+<select id="avatarSelect">
+  <option value="🎉">🎉</option>
+  <option value="🎂">🎂</option>
+  <option value="🎁">🎁</option>
+  <option value="🕺">🕺</option>
+  <option value="💃">💃</option>
+</select>
+
+<label for="gamePinInput">Enter Game PIN:</label>
+<input type="text" id="gamePinInput" placeholder="Game PIN" readonly>
+
+<button id="joinBtn">Join Game</button>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+const joinBtn = document.getElementById("joinBtn");
+const playerNameInput = document.getElementById("playerName");
+const avatarSelect = document.getElementById("avatarSelect");
+const gamePinInput = document.getElementById("gamePinInput");
+
+// Get PIN from URL if present
+const params = new URLSearchParams(window.location.search);
+const pin = params.get("pin");
+if(pin) gamePinInput.value = pin;
+
+joinBtn.onclick = () => {
+  const name = playerNameInput.value.trim();
+  const avatar = avatarSelect.value;
+  const pinValue = gamePinInput.value.trim();
+
+  if(!name || !pinValue){
+    alert("Please enter name and PIN");
+    return;
+  }
+
+  // store player info locally
+  localStorage.setItem("playerName", name);
+
+  // emit join event to server
+  socket.emit("player-join", { pin: pinValue, name, avatar });
+
+  // redirect to game page as player
+  window.location.href = `/game.html?pin=${pinValue}&host=false`;
+};
+</script>
+
+</body>
+</html>

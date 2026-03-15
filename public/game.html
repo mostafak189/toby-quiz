@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toby's Game</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { background:black; color:red; font-family:Arial,sans-serif; text-align:center; margin:0; padding:20px;}
+h1,h2 { margin-bottom:15px;}
+#questionBox { margin:20px auto; padding:20px; border:2px solid red; border-radius:10px; width:90%; max-width:700px;}
+button.answerBtn { margin:10px auto; padding:12px 20px; font-size:18px; color:red; background:black; border:2px solid red; border-radius:8px; display:block; width:80%; max-width:400px; cursor:pointer;}
+button.answerBtn:disabled { opacity:0.5; cursor:default;}
+#playerList { margin-top:20px; }
+</style>
+</head>
+<body>
+
+<h1>Toby's Era Quiz</h1>
+
+<div id="status"></div>
+
+<div id="questionBox" style="display:none;">
+  <h2 id="questionText"></h2>
+  <div id="answersContainer"></div>
+</div>
+
+<div id="playerList" style="display:none;">
+  <h3>Players Joined</h3>
+  <ul id="playersUl"></ul>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+const urlParams = new URLSearchParams(window.location.search);
+const pin = urlParams.get("pin");
+const isHost = urlParams.get("host") === "true";
+const playerName = localStorage.getItem("playerName") || "Guest";
+
+const statusDiv = document.getElementById("status");
+const questionBox = document.getElementById("questionBox");
+const questionText = document.getElementById("questionText");
+const answersContainer = document.getElementById("answersContainer");
+const playerList = document.getElementById("playerList");
+const playersUl = document.getElementById("playersUl");
+
+let answered = false;
+
+// Host setup
+if(isHost){
+  statusDiv.innerHTML = `Hosting Game: ${pin}`;
+  playerList.style.display = "block";
+
+  socket.emit("host-join", { pin });
+
+  // listen for players joining
+  socket.on("player-joined", (players) => {
+    playersUl.innerHTML = "";
+    players.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = `${p.avatar} ${p.name}`;
+      playersUl.appendChild(li);
+    });
+  });
+
+  socket.on("new-question", (q) => {
+    showQuestion(q);
+  });
+} else {
+  // Player setup
+  statusDiv.innerHTML = `Joined Game: ${pin} as ${playerName}`;
+  socket.emit("player-ready", { pin, name: playerName });
+
+  socket.on("question", (q) => {
+    showQuestion(q);
+  });
+
+  socket.on("round-end", (data) => {
+    alert(`Round finished! Correct answer: ${data.correct}`);
+  });
+}
+
+// Function to display a question
+function showQuestion(q){
+  answered = false;
+  questionBox.style.display = "block";
+  questionText.textContent = q.question;
+  answersContainer.innerHTML = "";
+
+  for(const key in q.answers){
+    const btn = document.createElement("button");
+    btn.classList.add("answerBtn");
+    btn.textContent = `${key}: ${q.answers[key]}`;
+    btn.onclick = () => {
+      if(answered) return;
+      answered = true;
+      socket.emit("submit-answer", { pin, player: playerName, answer: key });
+      btn.style.borderColor = "green";
+    };
+    answersContainer.appendChild(btn);
+  }
+}
+
+// Listen for feedback
+socket.on("answer-feedback", (data) => {
+  if(!isHost){
+    alert(data.message);
+  }
+});
+</script>
+
+</body>
+</html>

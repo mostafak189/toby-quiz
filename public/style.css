@@ -1,0 +1,49 @@
+body{
+  margin:0;
+  padding:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:black;
+  color:red;
+}
+
+h1,h2,h3{
+  text-align:center;
+}
+
+button{
+  background:black;
+  color:red;
+  border:2px solid red;
+  padding:10px 16px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+button:hover{
+  background:red;
+  color:black;
+}
+
+input,select{
+  background:black;
+  color:red;
+  border:2px solid red;
+  padding:8px;
+  border-radius:6px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td{
+  border:1px solid red;
+  padding:6px;
+  text-align:center;
+}
+
+th{
+  background:red;
+  color:black;
+}

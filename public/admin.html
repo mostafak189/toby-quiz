@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { background:black; color:red; font-family:Arial,sans-serif; padding:20px; margin:0; }
+h1,h2{margin-bottom:15px;}
+#addQuestionRow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
+#addQuestionRow input,#addQuestionRow select,#addQuestionRow button{padding:10px;color:red;background:black;border:2px solid red;border-radius:5px;font-size:16px;}
+#addQuestionRow input{flex:1;min-width:100px;}
+table{width:100%;border-collapse:collapse;}
+thead{background:red;color:black;}
+th,td{padding:8px;text-align:center;border:1px solid red;color:red;background:black;}
+td input, td select{width:100%;padding:6px;color:red;background:black;border:1px solid red;border-radius:3px;text-align:center;}
+button.deleteBtn,button.saveBtn{padding:5px 10px;border:2px solid red;background:black;color:red;border-radius:5px;cursor:pointer;margin:2px;}
+#eraList{margin-bottom:15px;}
+@media (max-width:600px){#addQuestionRow{flex-direction:column;}#addQuestionRow input{flex:100%;}}
+</style>
+</head>
+<body>
+
+<h1>Admin Panel</h1>
+
+<h2>Manage Eras</h2>
+<div id="eraList"></div>
+<button onclick="addEra()">Add Era</button>
+
+<h2>Add Question</h2>
+<div id="addQuestionRow">
+  <select id="eraSelect"></select>
+  <input type="text" id="questionText" placeholder="Question Text">
+  <input type="text" id="optionA" placeholder="Option A">
+  <input type="text" id="optionB" placeholder="Option B">
+  <input type="text" id="optionC" placeholder="Option C">
+  <input type="text" id="optionD" placeholder="Option D">
+  <select id="correctSelect">
+    <option value="A">A</option>
+    <option value="B">B</option>
+    <option value="C">C</option>
+    <option value="D">D</option>
+  </select>
+  <button id="addQuestionBtn">Add Question</button>
+</div>
+
+<h2>Manage Questions</h2>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Era</th>
+      <th>Question</th>
+      <th>A</th>
+      <th>B</th>
+      <th>C</th>
+      <th>D</th>
+      <th>Correct</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="questionsBody"></tbody>
+</table>
+
+<script>
+let eras=[],questions=[];
+
+async function fetchEras(){
+  const res=await fetch("/eras");
+  eras=await res.json();
+  renderEras();
+  populateEraSelect();
+}
+
+function renderEras(){
+  const eraDiv=document.getElementById("eraList");
+  eraDiv.innerHTML="";
+  eras.forEach(e=>{
+    const div=document.createElement("div");
+    div.style.marginBottom="5px";
+    div.innerHTML=`${e.name} <button class="deleteBtn" onclick="deleteEra(${e.id})">Delete Era</button>`;
+    eraDiv.appendChild(div);
+  });
+}
+
+function populateEraSelect(){
+  const select=document.getElementById("eraSelect");
+  select.innerHTML=eras.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
+}
+
+async function addEra(){
+  const name=prompt("Enter Era name:");
+  if(!name) return;
+  await fetch("/eras",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
+  await fetchEras();
+  await fetchQuestions();
+}
+
+async function deleteEra(id){
+  if(!confirm("Delete this era and all its questions?")) return;
+  await fetch(`/eras/${id}`,{method:"DELETE"});
+  await fetchEras();
+  await fetchQuestions();
+}
+
+async function fetchQuestions(){
+  const res=await fetch("/questions/0");
+  questions=await res.json();
+  renderQuestions();
+}
+
+document.getElementById("addQuestionBtn").onclick=async function(){
+  if(!eras.length) return alert("Please add an era first!");
+  const era_id=document.getElementById("eraSelect").value;
+  const text=document.getElementById("questionText").value.trim();
+  const option_a=document.getElementById("optionA").value.trim();
+  const option_b=document.getElementById("optionB").value.trim();
+  const option_c=document.getElementById("optionC").value.trim();
+  const option_d=document.getElementById("optionD").value.trim();
+  const correct=document.getElementById("correctSelect").value;
+  if(!text||!option_a||!option_b||!option_c||!option_d||!correct) return alert("All fields required!");
+  await fetch("/questions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({era_id,text,option_a,option_b,option_c,option_d,correct})});
+  document.getElementById("questionText").value="";
+  document.getElementById("optionA").value="";
+  document.getElementById("optionB").value="";
+  document.getElementById("optionC").value="";
+  document.getElementById("optionD").value="";
+  await fetchQuestions();
+}
+
+function renderQuestions(){
+  const tbody=document.getElementById("questionsBody");
+  tbody.innerHTML="";
+  questions.forEach(q=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${q.id}</td>
+      <td><select id="era-${q.id}">${eras.map(e=>`<option value="${e.id}" ${e.id===q.era_id?"selected":""}>${e.name}</option>`).join("")}</select></td>
+      <td><input value="${q.text}" id="text-${q.id}"></td>
+      <td><input value="${q.option_a}" id="a-${q.id}"></td>
+      <td><input value="${q.option_b}" id="b-${q.id}"></td>
+      <td><input value="${q.option_c}" id="c-${q.id}"></td>
+      <td><input value="${q.option_d}" id="d-${q.id}"></td>
+      <td><select id="correct-${q.id}">
+        <option value="A" ${q.correct==="A"?"selected":""}>A</option>
+        <option value="B" ${q.correct==="B"?"selected":""}>B</option>
+        <option value="C" ${q.correct==="C"?"selected":""}>C</option>
+        <option value="D" ${q.correct==="D"?"selected":""}>D</option>
+      </select></td>
+      <td>
+        <button class="saveBtn" onclick="saveQuestion(${q.id})">Save</button>
+        <button class="deleteBtn" onclick="deleteQuestion(${q.id})">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function saveQuestion(id){
+  const era_id=parseInt(document.getElementById(`era-${id}`).value);
+  const text=document.getElementById(`text-${id}`).value.trim();
+  const option_a=document.getElementById(`a-${id}`).value.trim();
+  const option_b=document.getElementById(`b-${id}`).value.trim();
+  const option_c=document.getElementById(`c-${id}`).value.trim();
+  const option_d=document.getElementById(`d-${id}`).value.trim();
+  const correct=document.getElementById(`correct-${id}`).value;
+  if(!text||!option_a||!option_b||!option_c||!option_d||!correct) return alert("All fields required!");
+  await fetch(`/questions/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({era_id,text,option_a,option_b,option_c,option_d,correct})});
+  await fetchQuestions();
+}
+
+async function deleteQuestion(id){
+  if(!confirm("Delete this question?")) return;
+  await fetch(`/questions/${id}`,{method:"DELETE"});
+  await fetchQuestions();
+}
+
+async function init(){
+  await fetchEras();
+  await fetchQuestions();
+}
+init();
+</script>
+
+</body>
+</html>

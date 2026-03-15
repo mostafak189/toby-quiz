@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choose Era</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+body { background:black; color:red; font-family:Arial, sans-serif; text-align:center; padding:20px; }
+h1 { margin-bottom:20px; }
+#eraContainer { display:flex; flex-wrap:wrap; justify-content:center; gap:15px; margin-top:20px; }
+.era-card {
+  padding:20px 30px;
+  background:red;
+  color:black;
+  font-size:18px;
+  border-radius:12px;
+  cursor:pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.era-card:hover { transform: scale(1.05); box-shadow:0 0 15px red; }
+</style>
+</head>
+<body>
+
+<h1>Select an Era to Start the Game</h1>
+<div id="eraContainer">Loading eras...</div>
+
+<script>
+const socket = io();
+const params = new URLSearchParams(window.location.search);
+const pin = params.get("pin");
+
+const container = document.getElementById("eraContainer");
+
+// Fetch eras from server
+fetch("/eras")
+  .then(res => res.json())
+  .then(eras => {
+    container.innerHTML = "";
+    if(eras.length === 0){
+      container.textContent = "No eras available. Add eras in admin first.";
+      return;
+    }
+    eras.forEach(era => {
+      const btn = document.createElement("div");
+      btn.className = "era-card";
+      btn.textContent = era.name;
+      btn.onclick = () => {
+        // emit to server which era was selected
+        socket.emit("select-era", { pin, era: era.name });
+        // go to game page
+        window.location.href = `/game.html?pin=${pin}&host=true`;
+      };
+      container.appendChild(btn);
+    });
+  })
+  .catch(err=>{
+    container.textContent = "Failed to load eras.";
+    console.error(err);
+  });
+</script>
+
+</body>
+</html>

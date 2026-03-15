@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Host Game</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { background:black; color:red; font-family:Arial,sans-serif; text-align:center; margin:0; padding:20px;}
+h1,h2{margin-bottom:15px;}
+#playersList { margin:20px auto; padding:10px; border:2px solid red; border-radius:10px; max-width:400px; text-align:left;}
+button { margin:10px; padding:10px 20px; font-size:16px; cursor:pointer; border:2px solid red; background:black; color:red; border-radius:5px;}
+</style>
+</head>
+<body>
+
+<h1>Host Game</h1>
+<h2>Game Pin: <span id="gamePin"></span></h2>
+<div>
+  <button id="startGameBtn">Start Game</button>
+</div>
+<div id="playersList">
+  <h3>Players Joined:</h3>
+  <ul id="playersUl"></ul>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let gamePin = Math.floor(100000 + Math.random()*900000).toString();
+document.getElementById("gamePin").textContent = gamePin;
+
+let players = [];
+
+socket.emit("host-game",{pin:gamePin});
+
+socket.on("player-joined",(player)=>{
+  if(!players.includes(player)){
+    players.push(player);
+    updatePlayerList();
+  }
+});
+
+function updatePlayerList(){
+  const ul = document.getElementById("playersUl");
+  ul.innerHTML = "";
+  players.forEach(p=>{
+    let li = document.createElement("li");
+    li.textContent = p;
+    ul.appendChild(li);
+  });
+}
+
+document.getElementById("startGameBtn").onclick = () => {
+  if(players.length===0){
+    alert("Cannot start game: No players joined!");
+    return;
+  }
+  socket.emit("start-game",{pin:gamePin});
+};
+</script>
+
+</body>
+</html>

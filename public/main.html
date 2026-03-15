@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Toby Quiz</title>
+<style>
+html, body {
+  margin:0; padding:0; height:100%; font-family: Arial,sans-serif;
+  background: linear-gradient(135deg,#f0f4f8,#d9e2ec);
+  display: flex; justify-content:center; align-items:center;
+}
+.container {
+  display: flex;
+  width: 100%;
+  max-width: 800px;
+  height: 100%;
+}
+.card {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3em;
+  font-weight: bold;
+  border-radius: 20px;
+  color: white;
+  margin: 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.card:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(0,0,0,0.35);}
+.blue { background-color: #3498db; }
+.red { background-color: #e74c3c; }
+
+/* --- Animated Admin Box --- */
+#adminBox {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: #fff;
+  padding: 30px 40px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  text-align: center;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  opacity: 0;
+  z-index: 100;
+  width: 300px;
+}
+#adminBox.active {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+#adminBox h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+#adminBox input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 rgba(0,0,0,0);
+}
+#adminBox input[type="password"]:focus {
+  border-color: #e74c3c;
+  box-shadow: 0 0 8px #e74c3c;
+}
+#adminBox input::placeholder {
+  color: #aaa;
+  transition: all 0.3s ease;
+}
+#adminBox input:focus::placeholder {
+  color: transparent;
+}
+#adminBox button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #e74c3c;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+#adminBox button:hover { background-color: #c0392b; }
+#adminBox p { margin-top:10px; min-height:20px; color:red; }
+#overlay {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.4);
+  opacity:0; pointer-events:none;
+  transition: opacity 0.3s ease;
+  z-index: 50;
+}
+#overlay.active { opacity:1; pointer-events:auto; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card blue" id="hostCard">Host Game</div>
+  <div class="card red" id="adminCard">Admin Panel</div>
+</div>
+
+<!-- Animated Admin Login Box -->
+<div id="overlay"></div>
+<div id="adminBox">
+  <h2>Enter Admin Password</h2>
+  <input type="password" id="adminPassword" placeholder="Password">
+  <button id="loginBtn">Login</button>
+  <p id="loginStatus"></p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Host click
+  document.getElementById('hostCard').addEventListener('click', () => {
+    window.location.href = 'host.html';
+  });
+
+  const adminCard = document.getElementById('adminCard');
+  const adminBox = document.getElementById('adminBox');
+  const overlay = document.getElementById('overlay');
+  const loginBtn = document.getElementById('loginBtn');
+  const passwordInput = document.getElementById('adminPassword');
+  const statusEl = document.getElementById('loginStatus');
+
+  // Show animated login box
+  adminCard.addEventListener('click', () => {
+    adminBox.classList.add('active');
+    overlay.classList.add('active');
+    passwordInput.value = '';
+    statusEl.textContent = '';
+    passwordInput.focus();
+  });
+
+  // Hide box when overlay clicked
+  overlay.addEventListener('click', () => {
+    adminBox.classList.remove('active');
+    overlay.classList.remove('active');
+  });
+
+  // Login validation
+  loginBtn.addEventListener('click', () => {
+    const pwd = passwordInput.value;
+    if(pwd === 'HappyBirthdayToby') {
+      statusEl.style.color = 'green';
+      statusEl.textContent = 'Access granted!';
+      setTimeout(() => { window.location.href = 'admin.html'; }, 500);
+    } else {
+      statusEl.style.color = 'red';
+      statusEl.textContent = 'Incorrect Password!';
+      passwordInput.value = '';
+      passwordInput.focus();
+    }
+  });
+
+  // Optional: allow Enter key
+  passwordInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter') loginBtn.click();
+  });
+});
+</script>
+
+</body>
+</html>
