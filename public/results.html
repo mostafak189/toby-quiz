@@ -241,7 +241,9 @@ if (isHost) {
   // Player: hide Play Again, show Exit
   playAgainBtn.style.display = "none";
   exitBtn.style.display      = "inline-block";
-  exitBtn.onclick = () => { window.close(); };
+  exitBtn.onclick = () => {
+    window.location.href = "/bye.html";
+  };
 }
 
 // Confetti
