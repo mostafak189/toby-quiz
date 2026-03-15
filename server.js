@@ -156,6 +156,15 @@ function getRoom(pin) {
   return rooms[pin];
 }
 
+// Fisher-Yates shuffle — guarantees every question appears exactly once in random order
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 function broadcastPlayers(pin) {
   const room = rooms[pin];
   if (!room) return;
@@ -267,7 +276,7 @@ io.on("connection", (socket) => {
       sql:  `SELECT q.* FROM questions q JOIN eras e ON q.era_id = e.id WHERE e.name = ? ORDER BY RANDOM()`,
       args: [era]
     }).then(result => {
-      room.questions    = result.rows;
+      room.questions    = shuffle(Array.from(result.rows)); // shuffle in-memory for guaranteed randomness
       room.currentIndex = 0;
       room.started      = true;
       console.log(`Loaded ${result.rows.length} questions for era "${era}" in room ${pin}`);
