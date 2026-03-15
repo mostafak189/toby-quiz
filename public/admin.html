@@ -4,184 +4,242 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel</title>
-<link rel="stylesheet" href="style.css">
 <style>
-body { background:black; color:red; font-family:Arial,sans-serif; padding:20px; margin:0; }
-h1,h2{margin-bottom:15px;}
-#addQuestionRow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
-#addQuestionRow input,#addQuestionRow select,#addQuestionRow button{padding:10px;color:red;background:black;border:2px solid red;border-radius:5px;font-size:16px;}
-#addQuestionRow input{flex:1;min-width:100px;}
-table{width:100%;border-collapse:collapse;}
-thead{background:red;color:black;}
-th,td{padding:8px;text-align:center;border:1px solid red;color:red;background:black;}
-td input, td select{width:100%;padding:6px;color:red;background:black;border:1px solid red;border-radius:3px;text-align:center;}
-button.deleteBtn,button.saveBtn{padding:5px 10px;border:2px solid red;background:black;color:red;border-radius:5px;cursor:pointer;margin:2px;}
-#eraList{margin-bottom:15px;}
-@media (max-width:600px){#addQuestionRow{flex-direction:column;}#addQuestionRow input{flex:100%;}}
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; color: #ff2222; font-family: 'Share Tech Mono', monospace; padding: 20px; min-height: 100vh; }
+  h1 { font-family: 'Orbitron', sans-serif; font-size: 2rem; text-align: center; letter-spacing: 4px; margin-bottom: 30px; text-shadow: 0 0 20px #ff2222; }
+  h2 { font-family: 'Orbitron', sans-serif; font-size: 1rem; letter-spacing: 3px; margin: 25px 0 12px; color: #ff5555; border-bottom: 1px solid #330000; padding-bottom: 8px; }
+
+  /* ERA MANAGEMENT */
+  #eraList { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .era-tag { background: #1a0000; border: 1px solid #ff2222; padding: 6px 14px; border-radius: 4px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .era-tag button { background: none; border: none; color: #ff4444; cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+  .era-tag button:hover { color: #fff; }
+
+  /* ACTION BUTTONS */
+  .btn { padding: 9px 20px; background: #0a0a0a; color: #ff2222; border: 2px solid #ff2222; border-radius: 4px; font-family: 'Share Tech Mono', monospace; font-size: 14px; cursor: pointer; transition: all 0.2s; letter-spacing: 1px; }
+  .btn:hover { background: #ff2222; color: #000; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; border-width: 1px; }
+  .btn-save { border-color: #22cc55; color: #22cc55; }
+  .btn-save:hover { background: #22cc55; color: #000; }
+  .btn-del { border-color: #ff2222; color: #ff2222; }
+  .btn-del:hover { background: #ff2222; color: #000; }
+
+  /* ADD QUESTION FORM */
+  #addForm { background: #0f0000; border: 1px solid #330000; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-grid input, .form-grid select, .form-full input, .form-full select { width: 100%; padding: 9px 12px; background: #1a0000; color: #ff2222; border: 1px solid #440000; border-radius: 4px; font-family: 'Share Tech Mono', monospace; font-size: 14px; }
+  .form-full { margin-bottom: 10px; }
+  .form-footer { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .form-footer select { padding: 9px 12px; background: #1a0000; color: #ff2222; border: 1px solid #440000; border-radius: 4px; font-family: 'Share Tech Mono', monospace; font-size: 14px; }
+  input::placeholder { color: #550000; }
+  input:focus, select:focus { outline: none; border-color: #ff2222; box-shadow: 0 0 8px #ff222233; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
+  thead { background: #1a0000; }
+  th { padding: 10px 8px; text-align: center; color: #ff5555; border: 1px solid #330000; font-weight: normal; letter-spacing: 1px; white-space: nowrap; }
+  td { padding: 6px 8px; border: 1px solid #1a0000; text-align: center; vertical-align: middle; }
+  tr:hover td { background: #0f0000; }
+  td input, td select { width: 100%; padding: 5px 8px; background: #0a0a0a; color: #ff2222; border: 1px solid #330000; border-radius: 3px; font-family: 'Share Tech Mono', monospace; font-size: 12px; text-align: center; }
+  td input:focus, td select:focus { outline: none; border-color: #ff4444; }
+  .actions { display: flex; gap: 5px; justify-content: center; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: #440000; border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 
-<h1>Admin Panel</h1>
+<h1>⚙ ADMIN PANEL</h1>
 
-<h2>Manage Eras</h2>
-<div id="eraList"></div>
-<button onclick="addEra()">Add Era</button>
+<h2>MANAGE ERAS</h2>
+<div id="eraList">Loading...</div>
+<button class="btn" onclick="addEra()">+ Add Era</button>
 
-<h2>Add Question</h2>
-<div id="addQuestionRow">
-  <select id="eraSelect"></select>
-  <input type="text" id="questionText" placeholder="Question Text">
-  <input type="text" id="optionA" placeholder="Option A">
-  <input type="text" id="optionB" placeholder="Option B">
-  <input type="text" id="optionC" placeholder="Option C">
-  <input type="text" id="optionD" placeholder="Option D">
-  <select id="correctSelect">
-    <option value="A">A</option>
-    <option value="B">B</option>
-    <option value="C">C</option>
-    <option value="D">D</option>
-  </select>
-  <button id="addQuestionBtn">Add Question</button>
+<h2>ADD QUESTION</h2>
+<div id="addForm">
+  <div class="form-full">
+    <input type="text" id="questionText" placeholder="Question text...">
+  </div>
+  <div class="form-grid">
+    <input type="text" id="optionA" placeholder="Option A">
+    <input type="text" id="optionB" placeholder="Option B">
+    <input type="text" id="optionC" placeholder="Option C">
+    <input type="text" id="optionD" placeholder="Option D">
+  </div>
+  <div class="form-footer">
+    <select id="eraSelect"></select>
+    <select id="correctSelect">
+      <option value="A">Correct: A</option>
+      <option value="B">Correct: B</option>
+      <option value="C">Correct: C</option>
+      <option value="D">Correct: D</option>
+    </select>
+    <button class="btn" id="addQuestionBtn">+ Add Question</button>
+  </div>
 </div>
 
-<h2>Manage Questions</h2>
-<table>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Era</th>
-      <th>Question</th>
-      <th>A</th>
-      <th>B</th>
-      <th>C</th>
-      <th>D</th>
-      <th>Correct</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="questionsBody"></tbody>
-</table>
+<h2>MANAGE QUESTIONS</h2>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Era</th>
+        <th>Question</th>
+        <th>A</th>
+        <th>B</th>
+        <th>C</th>
+        <th>D</th>
+        <th>Correct</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="questionsBody"></tbody>
+  </table>
+</div>
 
 <script>
-let eras=[],questions=[];
+let eras = [], questions = [];
 
-async function fetchEras(){
-  const res=await fetch("/eras");
-  eras=await res.json();
+async function fetchEras() {
+  const res = await fetch("/eras");
+  eras = await res.json();
   renderEras();
   populateEraSelect();
 }
 
-function renderEras(){
-  const eraDiv=document.getElementById("eraList");
-  eraDiv.innerHTML="";
-  eras.forEach(e=>{
-    const div=document.createElement("div");
-    div.style.marginBottom="5px";
-    div.innerHTML=`${e.name} <button class="deleteBtn" onclick="deleteEra(${e.id})">Delete Era</button>`;
-    eraDiv.appendChild(div);
+function renderEras() {
+  const div = document.getElementById("eraList");
+  if (!eras.length) { div.innerHTML = '<span style="color:#550000">No eras yet.</span>'; return; }
+  div.innerHTML = "";
+  eras.forEach(e => {
+    const tag = document.createElement("div");
+    tag.className = "era-tag";
+    tag.innerHTML = `${e.name} <button onclick="deleteEra(${e.id})" title="Delete era">✕</button>`;
+    div.appendChild(tag);
   });
 }
 
-function populateEraSelect(){
-  const select=document.getElementById("eraSelect");
-  select.innerHTML=eras.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
+function populateEraSelect() {
+  const sel = document.getElementById("eraSelect");
+  sel.innerHTML = eras.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
 }
 
-async function addEra(){
-  const name=prompt("Enter Era name:");
-  if(!name) return;
-  await fetch("/eras",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
+async function addEra() {
+  const name = prompt("Enter Era name:");
+  if (!name || !name.trim()) return;
+  await fetch("/eras", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim() }) });
+  await fetchEras();
+}
+
+async function deleteEra(id) {
+  if (!confirm("Delete this era AND all its questions permanently?")) return;
+  await fetch(`/eras/${id}`, { method: "DELETE" });
   await fetchEras();
   await fetchQuestions();
 }
 
-async function deleteEra(id){
-  if(!confirm("Delete this era and all its questions?")) return;
-  await fetch(`/eras/${id}`,{method:"DELETE"});
-  await fetchEras();
-  await fetchQuestions();
-}
-
-async function fetchQuestions(){
-  const res=await fetch("/questions/0");
-  questions=await res.json();
+async function fetchQuestions() {
+  const res = await fetch("/questions/0");
+  questions = await res.json();
   renderQuestions();
 }
 
-document.getElementById("addQuestionBtn").onclick=async function(){
-  if(!eras.length) return alert("Please add an era first!");
-  const era_id=document.getElementById("eraSelect").value;
-  const text=document.getElementById("questionText").value.trim();
-  const option_a=document.getElementById("optionA").value.trim();
-  const option_b=document.getElementById("optionB").value.trim();
-  const option_c=document.getElementById("optionC").value.trim();
-  const option_d=document.getElementById("optionD").value.trim();
-  const correct=document.getElementById("correctSelect").value;
-  if(!text||!option_a||!option_b||!option_c||!option_d||!correct) return alert("All fields required!");
-  await fetch("/questions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({era_id,text,option_a,option_b,option_c,option_d,correct})});
-  document.getElementById("questionText").value="";
-  document.getElementById("optionA").value="";
-  document.getElementById("optionB").value="";
-  document.getElementById("optionC").value="";
-  document.getElementById("optionD").value="";
+document.getElementById("addQuestionBtn").onclick = async function () {
+  if (!eras.length) return alert("Please add an era first!");
+  const era_id = document.getElementById("eraSelect").value;
+  const text = document.getElementById("questionText").value.trim();
+  const option_a = document.getElementById("optionA").value.trim();
+  const option_b = document.getElementById("optionB").value.trim();
+  const option_c = document.getElementById("optionC").value.trim();
+  const option_d = document.getElementById("optionD").value.trim();
+  const correct = document.getElementById("correctSelect").value;
+  if (!text || !option_a || !option_b || !option_c || !option_d) return alert("All fields required!");
+  await fetch("/questions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ era_id, text, option_a, option_b, option_c, option_d, correct })
+  });
+  ["questionText","optionA","optionB","optionC","optionD"].forEach(id => document.getElementById(id).value = "");
   await fetchQuestions();
-}
+};
 
-function renderQuestions(){
-  const tbody=document.getElementById("questionsBody");
-  tbody.innerHTML="";
-  questions.forEach(q=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
+function renderQuestions() {
+  const tbody = document.getElementById("questionsBody");
+  tbody.innerHTML = "";
+  if (!questions.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="color:#550000;padding:20px">No questions yet.</td></tr>`;
+    return;
+  }
+  questions.forEach(q => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
       <td>${q.id}</td>
-      <td><select id="era-${q.id}">${eras.map(e=>`<option value="${e.id}" ${e.id===q.era_id?"selected":""}>${e.name}</option>`).join("")}</select></td>
-      <td><input value="${q.text}" id="text-${q.id}"></td>
-      <td><input value="${q.option_a}" id="a-${q.id}"></td>
-      <td><input value="${q.option_b}" id="b-${q.id}"></td>
-      <td><input value="${q.option_c}" id="c-${q.id}"></td>
-      <td><input value="${q.option_d}" id="d-${q.id}"></td>
-      <td><select id="correct-${q.id}">
-        <option value="A" ${q.correct==="A"?"selected":""}>A</option>
-        <option value="B" ${q.correct==="B"?"selected":""}>B</option>
-        <option value="C" ${q.correct==="C"?"selected":""}>C</option>
-        <option value="D" ${q.correct==="D"?"selected":""}>D</option>
-      </select></td>
       <td>
-        <button class="saveBtn" onclick="saveQuestion(${q.id})">Save</button>
-        <button class="deleteBtn" onclick="deleteQuestion(${q.id})">Delete</button>
+        <select id="era-${q.id}">
+          ${eras.map(e => `<option value="${e.id}" ${e.id === q.era_id ? "selected" : ""}>${e.name}</option>`).join("")}
+        </select>
+      </td>
+      <td><input value="${escHtml(q.text)}" id="text-${q.id}"></td>
+      <td><input value="${escHtml(q.option_a)}" id="a-${q.id}"></td>
+      <td><input value="${escHtml(q.option_b)}" id="b-${q.id}"></td>
+      <td><input value="${escHtml(q.option_c)}" id="c-${q.id}"></td>
+      <td><input value="${escHtml(q.option_d)}" id="d-${q.id}"></td>
+      <td>
+        <select id="correct-${q.id}">
+          ${["A","B","C","D"].map(v => `<option value="${v}" ${q.correct===v?"selected":""}>${v}</option>`).join("")}
+        </select>
+      </td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-sm btn-save" onclick="saveQuestion(${q.id})">Save</button>
+          <button class="btn btn-sm btn-del" onclick="deleteQuestion(${q.id})">Del</button>
+        </div>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-async function saveQuestion(id){
-  const era_id=parseInt(document.getElementById(`era-${id}`).value);
-  const text=document.getElementById(`text-${id}`).value.trim();
-  const option_a=document.getElementById(`a-${id}`).value.trim();
-  const option_b=document.getElementById(`b-${id}`).value.trim();
-  const option_c=document.getElementById(`c-${id}`).value.trim();
-  const option_d=document.getElementById(`d-${id}`).value.trim();
-  const correct=document.getElementById(`correct-${id}`).value;
-  if(!text||!option_a||!option_b||!option_c||!option_d||!correct) return alert("All fields required!");
-  await fetch(`/questions/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({era_id,text,option_a,option_b,option_c,option_d,correct})});
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+async function saveQuestion(id) {
+  const era_id = parseInt(document.getElementById(`era-${id}`).value);
+  const text = document.getElementById(`text-${id}`).value.trim();
+  const option_a = document.getElementById(`a-${id}`).value.trim();
+  const option_b = document.getElementById(`b-${id}`).value.trim();
+  const option_c = document.getElementById(`c-${id}`).value.trim();
+  const option_d = document.getElementById(`d-${id}`).value.trim();
+  const correct = document.getElementById(`correct-${id}`).value;
+  if (!text || !option_a || !option_b || !option_c || !option_d) return alert("All fields required!");
+  await fetch(`/questions/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ era_id, text, option_a, option_b, option_c, option_d, correct })
+  });
   await fetchQuestions();
 }
 
-async function deleteQuestion(id){
-  if(!confirm("Delete this question?")) return;
-  await fetch(`/questions/${id}`,{method:"DELETE"});
+async function deleteQuestion(id) {
+  if (!confirm("Delete this question?")) return;
+  await fetch(`/questions/${id}`, { method: "DELETE" });
   await fetchQuestions();
 }
 
-async function init(){
-  await fetchEras();
-  await fetchQuestions();
-}
+async function init() { await fetchEras(); await fetchQuestions(); }
 init();
 </script>
-
 </body>
 </html>
