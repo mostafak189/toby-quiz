@@ -143,14 +143,15 @@ const rooms = {};
 function getRoom(pin) {
   if (!rooms[pin]) {
     rooms[pin] = {
-      hostSocketId:     null,
-      players:          [],
-      questions:        [],
-      currentIndex:     -1,
-      era:              null,
-      answersThisRound: {},
-      timerHandle:      null,
-      started:          false
+      hostSocketId:      null,
+      players:           [],
+      questions:         [],
+      currentIndex:      -1,
+      era:               null,
+      answersThisRound:  {},
+      timerHandle:       null,
+      started:           false,
+      questionStartedAt: null   // server timestamp when current question began
     };
   }
   return rooms[pin];
@@ -177,17 +178,19 @@ function sendQuestion(pin) {
   if (room.currentIndex >= room.questions.length) { endGame(pin); return; }
 
   const q = room.questions[room.currentIndex];
-  room.answersThisRound = {};
+  room.answersThisRound  = {};
+  room.questionStartedAt = Date.now(); // record exact start time
 
   io.to(pin).emit("next-question", {
-    questionNumber: room.currentIndex + 1,
-    totalQuestions: room.questions.length,
-    question_text:  q.text,
+    questionNumber:    room.currentIndex + 1,
+    totalQuestions:    room.questions.length,
+    question_text:     q.text,
     a: q.option_a,
     b: q.option_b,
     c: q.option_c,
     d: q.option_d,
-    time: 30
+    duration:          30,
+    startedAt:         room.questionStartedAt  // clients use this to sync
   });
 
   if (room.timerHandle) clearTimeout(room.timerHandle);
@@ -253,7 +256,7 @@ io.on("connection", (socket) => {
     broadcastPlayers(pin);
     console.log(`Player ${name} joined room ${pin}`);
 
-    // If game already started, send current question immediately
+    // If game already started, send current question with correct remaining time
     if (room.started && room.currentIndex >= 0 && room.currentIndex < room.questions.length) {
       const q = room.questions[room.currentIndex];
       socket.emit("next-question", {
@@ -264,7 +267,8 @@ io.on("connection", (socket) => {
         b: q.option_b,
         c: q.option_c,
         d: q.option_d,
-        time: 30
+        duration:       30,
+        startedAt:      room.questionStartedAt
       });
     }
   });
@@ -313,7 +317,8 @@ io.on("connection", (socket) => {
       b: q.option_b,
       c: q.option_c,
       d: q.option_d,
-      time: 30
+      duration:       30,
+      startedAt:      room.questionStartedAt
     });
   });
 
