@@ -63,7 +63,10 @@
 
 <h2>MANAGE ERAS</h2>
 <div id="eraList">Loading...</div>
-<button class="btn" onclick="addEra()">+ Add Era</button>
+<div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+  <input type="text" id="eraNameInput" placeholder="New era name..." style="padding:9px 14px;background:#1a0000;color:#ff2222;border:1px solid #440000;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:14px;flex:1;min-width:180px;max-width:300px;">
+  <button class="btn" onclick="addEra()">+ Add Era</button>
+</div>
 
 <h2>ADD QUESTION</h2>
 <div id="addForm">
@@ -136,9 +139,12 @@ function populateEraSelect() {
 }
 
 async function addEra() {
-  const name = prompt("Enter Era name:");
-  if (!name || !name.trim()) return;
-  await fetch("/eras", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim() }) });
+  const input = document.getElementById("eraNameInput");
+  const name = input.value.trim();
+  if (!name) { input.focus(); input.style.borderColor = "#ff2222"; return; }
+  input.style.borderColor = "#440000";
+  await fetch("/eras", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  input.value = "";
   await fetchEras();
 }
 
@@ -240,6 +246,11 @@ async function deleteQuestion(id) {
 
 async function init() { await fetchEras(); await fetchQuestions(); }
 init();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const eraInput = document.getElementById("eraNameInput");
+  if (eraInput) eraInput.addEventListener("keydown", e => { if (e.key === "Enter") addEra(); });
+});
 </script>
 </body>
 </html>
