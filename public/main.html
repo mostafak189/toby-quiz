@@ -5,33 +5,106 @@
 <title>Toby Quiz</title>
 <style>
 html, body {
-  margin:0; padding:0; height:100%; font-family: Arial,sans-serif;
-  background: linear-gradient(135deg,#f0f4f8,#d9e2ec);
-  display: flex; justify-content:center; align-items:center;
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
 }
 .container {
   display: flex;
   width: 100%;
-  max-width: 800px;
   height: 100%;
 }
 .card {
   flex: 1;
+  width: 50%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 3em;
   font-weight: bold;
-  border-radius: 20px;
   color: white;
-  margin: 10px;
   cursor: pointer;
   text-align: center;
-  transition: transform 0.3s, box-shadow 0.3s;
+  border-radius: 0;
+  margin: 0;
+  transition: flex 0.3s ease, filter 0.3s ease;
 }
-.card:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(0,0,0,0.35);}
+.card:hover { flex: 1.12; filter: brightness(1.12); }
 .blue { background-color: #3498db; }
-.red { background-color: #e74c3c; }
+.red  { background-color: #e74c3c; }
+
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+
+/* --- Header --- */
+header {
+  position: fixed;
+  top: 0; left: 0; width: 100%;
+  z-index: 10;
+  text-align: center;
+  padding: 16px 20px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Animated rainbow shimmer bar under the header */
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: -100%;
+  width: 300%;
+  height: 3px;
+  background: linear-gradient(90deg,
+    #ff0080, #ff4500, #ffd700, #00e676, #00b0ff, #e040fb, #ff0080);
+  background-size: 50% 100%;
+  animation: shimmerBar 2.5s linear infinite;
+}
+@keyframes shimmerBar {
+  0%   { left: -100%; }
+  100% { left: 0%; }
+}
+
+.header-text {
+  font-family: 'Pacifico', cursive;
+  font-size: clamp(1.1rem, 3vw, 2rem);
+  background: linear-gradient(90deg,
+    #ff6ec7, #ffd700, #ff6b6b, #a8ff78, #78ffd6, #ffd700, #ff6ec7);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbowText 3s linear infinite, headBob 1.8s ease-in-out infinite;
+  display: inline-block;
+  filter: drop-shadow(0 0 8px rgba(255,200,0,0.6));
+}
+@keyframes rainbowText {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes headBob {
+  0%,100% { transform: translateY(0px) rotate(-1deg); }
+  50%      { transform: translateY(-4px) rotate(1deg); }
+}
+
+/* Floating emoji bursts */
+.burst {
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  font-size: 1.5rem;
+  animation: floatBurst 3s ease-in-out infinite;
+  pointer-events: none;
+}
+.burst:nth-child(1) { left: 3%;  animation-delay: 0s;    animation-duration: 2.8s; }
+.burst:nth-child(2) { left: 8%;  animation-delay: 0.4s;  animation-duration: 3.2s; }
+.burst:nth-child(3) { right: 3%; animation-delay: 0.2s;  animation-duration: 3.0s; }
+.burst:nth-child(4) { right: 8%; animation-delay: 0.6s;  animation-duration: 2.6s; }
+@keyframes floatBurst {
+  0%,100% { transform: translateY(-50%) scale(1);    opacity: 1; }
+  50%      { transform: translateY(-70%) scale(1.25); opacity: 0.85; }
+}
 
 /* --- Animated Admin Box --- */
 #adminBox {
@@ -102,6 +175,14 @@ html, body {
 </head>
 <body>
 
+<header>
+  <span class="burst">🎉</span>
+  <span class="burst">🎂</span>
+  <span class="burst">🥳</span>
+  <span class="burst">🎊</span>
+  <span class="header-text">Night of 1000 Tobys &mdash; The Birthday Game ❤️</span>
+</header>
+
 <div class="container">
   <div class="card blue" id="hostCard">Host Game</div>
   <div class="card red" id="adminCard">Admin Panel</div>
@@ -150,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => { window.location.href = 'admin.html'; }, 500);
     } else {
       statusEl.style.color = 'red';
-      statusEl.textContent = 'You aint Birthday Boy Tobezz 🎈! Kindly fuck off the Admin Panel - Thank you ❤️';
+      statusEl.textContent = 'Incorrect Password!';
       passwordInput.value = '';
       passwordInput.focus();
     }
