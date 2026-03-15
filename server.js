@@ -233,10 +233,11 @@ io.on("connection", (socket) => {
   // Player joins
   socket.on("player-join", ({ pin, name, avatar }) => {
     const room = getRoom(pin);
-    // Prevent duplicate names
+    // Prevent duplicate names — update socketId if reconnecting
     const existing = room.players.find(p => p.name === name);
     if (existing) {
       existing.socketId = socket.id;
+      existing.avatar = avatar; // update avatar in case
     } else {
       room.players.push({ socketId: socket.id, name, avatar, score: 0 });
     }
@@ -245,6 +246,21 @@ io.on("connection", (socket) => {
     socket.data.name = name;
     broadcastPlayers(pin);
     console.log(`Player ${name} joined room ${pin}`);
+
+    // If game already started, immediately send the current question to this socket
+    if (room.started && room.currentIndex >= 0 && room.currentIndex < room.questions.length) {
+      const q = room.questions[room.currentIndex];
+      socket.emit("next-question", {
+        questionNumber: room.currentIndex + 1,
+        totalQuestions: room.questions.length,
+        question_text: q.text,
+        a: q.option_a,
+        b: q.option_b,
+        c: q.option_c,
+        d: q.option_d,
+        time: 30
+      });
+    }
   });
 
   // Host selects era and starts game
