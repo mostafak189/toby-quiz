@@ -118,7 +118,6 @@ html, body {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Host click
   document.getElementById('hostCard').addEventListener('click', () => {
     window.location.href = 'host.html';
   });
@@ -130,7 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('adminPassword');
   const statusEl = document.getElementById('loginStatus');
 
-  // Show animated login box
   adminCard.addEventListener('click', () => {
     adminBox.classList.add('active');
     overlay.classList.add('active');
@@ -139,16 +137,14 @@ document.addEventListener('DOMContentLoaded', () => {
     passwordInput.focus();
   });
 
-  // Hide box when overlay clicked
   overlay.addEventListener('click', () => {
     adminBox.classList.remove('active');
     overlay.classList.remove('active');
   });
 
-  // Login validation
   loginBtn.addEventListener('click', () => {
     const pwd = passwordInput.value;
-    if(pwd === 'HappyBirthdayToby') {
+    if (pwd === 'HappyBirthdayToby') {
       statusEl.style.color = 'green';
       statusEl.textContent = 'Access granted!';
       setTimeout(() => { window.location.href = 'admin.html'; }, 500);
@@ -160,9 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Optional: allow Enter key
   passwordInput.addEventListener('keydown', e => {
-    if(e.key === 'Enter') loginBtn.click();
+    if (e.key === 'Enter') loginBtn.click();
   });
 });
 </script>
