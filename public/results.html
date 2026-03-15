@@ -172,13 +172,15 @@
     <div id="lbList"></div>
   </div>
 
-  <button class="btn-again" onclick="window.location.href='/main.html'">↩ PLAY AGAIN</button>
+  <button class="btn-again" id="playAgainBtn">↩ PLAY AGAIN</button>
 </div>
 
 <script>
 const params = new URLSearchParams(window.location.search);
-const myName = params.get("name") || "";
+const myName  = params.get("name")  || "";
 const myScore = parseInt(params.get("score") || "0");
+const isHost  = params.get("host")  === "true";
+const gamePin = params.get("pin")   || "";
 let results = [];
 
 try {
@@ -224,6 +226,15 @@ results.forEach(p => {
 function escHtml(str) {
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
+
+// Play Again — host goes to main menu, players go back to join with pin pre-filled
+document.getElementById("playAgainBtn").onclick = () => {
+  if (isHost) {
+    window.location.href = "/main.html";
+  } else {
+    window.location.href = "/join.html" + (gamePin ? "?pin=" + encodeURIComponent(gamePin) : "");
+  }
+};
 
 // Confetti
 const canvas = document.getElementById("confettiCanvas");
