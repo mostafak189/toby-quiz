@@ -4,61 +4,224 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Host Game</title>
-<link rel="stylesheet" href="style.css">
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-body { background:black; color:red; font-family:Arial,sans-serif; text-align:center; margin:0; padding:20px;}
-h1,h2{margin-bottom:15px;}
-#playersList { margin:20px auto; padding:10px; border:2px solid red; border-radius:10px; max-width:400px; text-align:left;}
-button { margin:10px; padding:10px 20px; font-size:16px; cursor:pointer; border:2px solid red; background:black; color:red; border-radius:5px;}
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #000;
+    color: #ff2222;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.4rem, 4vw, 2.4rem);
+    letter-spacing: 4px;
+    text-align: center;
+    text-shadow: 0 0 30px #ff2222;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: #660000; font-size: 13px; letter-spacing: 2px; margin-bottom: 30px; text-align: center; }
+
+  .pin-box {
+    background: #0f0000;
+    border: 2px solid #ff2222;
+    border-radius: 12px;
+    padding: 16px 40px;
+    text-align: center;
+    margin-bottom: 24px;
+    box-shadow: 0 0 30px #ff222233;
+  }
+  .pin-label { font-size: 12px; letter-spacing: 3px; color: #660000; margin-bottom: 6px; }
+  .pin-number {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 8px;
+    color: #fff;
+    text-shadow: 0 0 20px #ff2222;
+  }
+
+  .qr-wrap {
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    display: inline-block;
+  }
+
+  .join-url {
+    font-size: 12px;
+    color: #660000;
+    margin-bottom: 24px;
+    word-break: break-all;
+    max-width: 400px;
+    text-align: center;
+  }
+
+  h2 { font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 3px; margin-bottom: 12px; color: #ff5555; }
+
+  #playerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    width: 100%;
+    max-width: 700px;
+    min-height: 60px;
+    margin-bottom: 24px;
+  }
+  .player-card {
+    background: #0f0000;
+    border: 1px solid #330000;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    animation: popIn 0.3s ease;
+  }
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .player-card .avatar { font-size: 2rem; margin-bottom: 4px; }
+  .player-card .pname { font-size: 13px; color: #ff5555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty-msg { color: #330000; font-size: 13px; text-align: center; padding: 20px 0; width: 100%; }
+
+  .btn-row { display: flex; gap: 12px; }
+  .btn {
+    padding: 14px 32px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid;
+  }
+  #startGameBtn {
+    background: #ff2222;
+    color: #000;
+    border-color: #ff2222;
+  }
+  #startGameBtn:disabled {
+    background: #1a0000;
+    color: #440000;
+    border-color: #330000;
+    cursor: not-allowed;
+  }
+  #startGameBtn:not(:disabled):hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+    box-shadow: 0 0 20px #ff2222;
+  }
+  #resetGameBtn {
+    background: #000;
+    color: #666;
+    border-color: #333;
+  }
+  #resetGameBtn:hover { color: #ff2222; border-color: #ff2222; }
+
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { text-shadow: 0 0 30px #ff2222; }
+    50% { text-shadow: 0 0 60px #ff2222, 0 0 80px #ff000088; }
+  }
 </style>
 </head>
 <body>
 
-<h1>Host Game</h1>
-<h2>Game Pin: <span id="gamePin"></span></h2>
-<div>
-  <button id="startGameBtn">Start Game</button>
-</div>
-<div id="playersList">
-  <h3>Players Joined:</h3>
-  <ul id="playersUl"></ul>
+<h1 class="pulse">🎮 TOBY'S BIRTHDAY QUIZ</h1>
+<p class="subtitle">HOST DASHBOARD</p>
+
+<div class="pin-box">
+  <div class="pin-label">GAME PIN</div>
+  <div class="pin-number" id="gamePin">------</div>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
+<div class="qr-wrap">
+  <div id="qrcode"></div>
+</div>
+
+<p class="join-url" id="joinUrl"></p>
+
+<h2>PLAYERS JOINED (<span id="playerCount">0</span>)</h2>
+<div id="playerGrid"><div class="empty-msg">Waiting for players to scan and join...</div></div>
+
+<div class="btn-row">
+  <button class="btn" id="startGameBtn" disabled>▶ START GAME</button>
+  <button class="btn" id="resetGameBtn">↺ RESET</button>
+</div>
+
 <script>
 const socket = io();
-let gamePin = Math.floor(100000 + Math.random()*900000).toString();
-document.getElementById("gamePin").textContent = gamePin;
+const gamePinEl = document.getElementById('gamePin');
+const playerGrid = document.getElementById('playerGrid');
+const startBtn = document.getElementById('startGameBtn');
+const resetBtn = document.getElementById('resetGameBtn');
+const playerCountEl = document.getElementById('playerCount');
+const joinUrlEl = document.getElementById('joinUrl');
 
-let players = [];
-
-socket.emit("host-game",{pin:gamePin});
-
-socket.on("player-joined",(player)=>{
-  if(!players.includes(player)){
-    players.push(player);
-    updatePlayerList();
-  }
-});
-
-function updatePlayerList(){
-  const ul = document.getElementById("playersUl");
-  ul.innerHTML = "";
-  players.forEach(p=>{
-    let li = document.createElement("li");
-    li.textContent = p;
-    ul.appendChild(li);
-  });
+// Generate or retrieve pin
+let gamePin = localStorage.getItem('gamePin');
+if (!gamePin) {
+  gamePin = Math.floor(100000 + Math.random() * 900000).toString();
+  localStorage.setItem('gamePin', gamePin);
 }
 
-document.getElementById("startGameBtn").onclick = () => {
-  if(players.length===0){
-    alert("Cannot start game: No players joined!");
+gamePinEl.textContent = gamePin;
+
+const joinUrl = `${window.location.origin}/join.html?pin=${gamePin}`;
+joinUrlEl.textContent = joinUrl;
+
+new QRCode(document.getElementById("qrcode"), {
+  text: joinUrl,
+  width: 180,
+  height: 180,
+  colorDark: "#000000",
+  colorLight: "#ffffff",
+  correctLevel: QRCode.CorrectLevel.H
+});
+
+socket.emit("host-join", gamePin);
+
+socket.on("update-players", players => {
+  playerCountEl.textContent = players.length;
+  if (!players.length) {
+    playerGrid.innerHTML = '<div class="empty-msg">Waiting for players to scan and join...</div>';
+    startBtn.disabled = true;
     return;
   }
-  socket.emit("start-game",{pin:gamePin});
-};
-</script>
+  playerGrid.innerHTML = "";
+  players.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    card.innerHTML = `<div class="avatar">${p.avatar}</div><div class="pname">${escHtml(p.name)}</div>`;
+    playerGrid.appendChild(card);
+  });
+  startBtn.disabled = false;
+});
 
+startBtn.onclick = () => {
+  window.location.href = `/choose-era.html?pin=${gamePin}`;
+};
+
+resetBtn.onclick = () => {
+  if (!confirm("Reset the game and clear all players?")) return;
+  socket.emit("reset-game", gamePin);
+  localStorage.removeItem('gamePin');
+  gamePin = Math.floor(100000 + Math.random() * 900000).toString();
+  localStorage.setItem('gamePin', gamePin);
+  window.location.reload();
+};
+
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+</script>
 </body>
 </html>
