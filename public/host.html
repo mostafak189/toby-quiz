@@ -166,12 +166,8 @@ const resetBtn = document.getElementById('resetGameBtn');
 const playerCountEl = document.getElementById('playerCount');
 const joinUrlEl = document.getElementById('joinUrl');
 
-// Generate or retrieve pin
-let gamePin = localStorage.getItem('gamePin');
-if (!gamePin) {
-  gamePin = Math.floor(100000 + Math.random() * 900000).toString();
-  localStorage.setItem('gamePin', gamePin);
-}
+// Always generate a fresh PIN on every page load
+const gamePin = Math.floor(100000 + Math.random() * 900000).toString();
 
 gamePinEl.textContent = gamePin;
 
@@ -213,10 +209,7 @@ startBtn.onclick = () => {
 resetBtn.onclick = () => {
   if (!confirm("Reset the game and clear all players?")) return;
   socket.emit("reset-game", gamePin);
-  localStorage.removeItem('gamePin');
-  gamePin = Math.floor(100000 + Math.random() * 900000).toString();
-  localStorage.setItem('gamePin', gamePin);
-  window.location.reload();
+  window.location.reload(); // reload generates a brand new PIN automatically
 };
 
 function escHtml(str) {
