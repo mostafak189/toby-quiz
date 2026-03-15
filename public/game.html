@@ -314,6 +314,9 @@ socket.on("next-question", q => {
   if (!isHost) {
     scoreEl.textContent = playerAvatar + " " + playerName + "  ·  SCORE: " + score;
   }
+  // reset submitted message for new question
+  submittedMsg.style.color = "#22cc55";
+  submittedMsg.textContent = "✓ ANSWER SUBMITTED!";
 
   aEl.innerHTML = "";
   ["a","b","c","d"].forEach((key, i) => {
@@ -331,16 +334,28 @@ socket.on("next-question", q => {
         if (answered) return;
         answered = true;
         socket.emit("submit-answer", { pin, player: playerName, answer: key });
-        setTimeout(() => {
-          aEl.style.opacity          = "0.35";
-          submittedMsg.style.display = "block";
-        }, 200);
+        // answer-result event from server will update score and show correct/wrong feedback
       };
     }
     aEl.appendChild(card);
   });
 
   startTimer(q.duration || 30, q.startedAt || Date.now());
+});
+
+// Server confirms if answer was correct and sends updated score
+socket.on("answer-result", ({ correct, newScore }) => {
+  score = newScore; // sync local score with server
+  scoreEl.textContent = playerAvatar + " " + playerName + "  ·  SCORE: " + score;
+  if (correct) {
+    submittedMsg.style.color = "#22cc55";
+    submittedMsg.textContent = "✓ CORRECT! +" + 1;
+  } else {
+    submittedMsg.style.color = "#ff4444";
+    submittedMsg.textContent = "✗ WRONG!";
+  }
+  submittedMsg.style.display = "block";
+  aEl.style.opacity = "0.35";
 });
 
 socket.on("game-finished", results => {
