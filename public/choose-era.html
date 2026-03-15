@@ -6,40 +6,81 @@
 <title>Choose Era</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-body { background:black; color:red; font-family:Arial, sans-serif; text-align:center; padding:20px; }
-h1 { margin-bottom:20px; }
-#eraContainer { display:flex; flex-wrap:wrap; justify-content:center; gap:15px; margin-top:20px; }
-.era-card {
-  padding:20px 30px;
-  background:red;
-  color:black;
-  font-size:18px;
-  border-radius:12px;
-  cursor:pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.era-card:hover { transform: scale(1.05); box-shadow:0 0 15px red; }
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #000;
+    color: #ff2222;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.2rem, 3.5vw, 2rem);
+    letter-spacing: 4px;
+    text-align: center;
+    text-shadow: 0 0 20px #ff2222;
+    margin-bottom: 10px;
+  }
+  .subtitle { color: #660000; font-size: 12px; letter-spacing: 2px; margin-bottom: 40px; text-align: center; }
+
+  #eraContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    max-width: 800px;
+  }
+  .era-card {
+    padding: 28px 40px;
+    background: #0f0000;
+    border: 2px solid #ff2222;
+    color: #ff2222;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(14px, 2.5vw, 20px);
+    border-radius: 12px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    text-align: center;
+    min-width: 180px;
+  }
+  .era-card:hover {
+    background: #ff2222;
+    color: #000;
+    transform: scale(1.05);
+    box-shadow: 0 0 30px #ff2222aa;
+  }
+  .era-card:active { transform: scale(0.97); }
+  .msg { color: #550000; font-size: 14px; }
 </style>
 </head>
 <body>
 
-<h1>Select an Era to Start the Game</h1>
-<div id="eraContainer">Loading eras...</div>
+<h1>SELECT AN ERA</h1>
+<p class="subtitle">HOST: CHOOSE THE QUIZ CATEGORY</p>
+
+<div id="eraContainer">
+  <div class="msg">Loading eras...</div>
+</div>
 
 <script>
 const socket = io();
 const params = new URLSearchParams(window.location.search);
 const pin = params.get("pin");
-
 const container = document.getElementById("eraContainer");
 
-// Fetch eras from server
 fetch("/eras")
   .then(res => res.json())
   .then(eras => {
     container.innerHTML = "";
-    if(eras.length === 0){
-      container.textContent = "No eras available. Add eras in admin first.";
+    if (!eras.length) {
+      container.innerHTML = '<div class="msg">No eras available. Add eras in admin first.</div>';
       return;
     }
     eras.forEach(era => {
@@ -47,19 +88,15 @@ fetch("/eras")
       btn.className = "era-card";
       btn.textContent = era.name;
       btn.onclick = () => {
-        // emit to server which era was selected
         socket.emit("select-era", { pin, era: era.name });
-        // go to game page
         window.location.href = `/game.html?pin=${pin}&host=true`;
       };
       container.appendChild(btn);
     });
   })
-  .catch(err=>{
-    container.textContent = "Failed to load eras.";
-    console.error(err);
+  .catch(() => {
+    container.innerHTML = '<div class="msg">Failed to load eras. Check server connection.</div>';
   });
 </script>
-
 </body>
 </html>
