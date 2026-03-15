@@ -173,6 +173,7 @@
   </div>
 
   <button class="btn-again" id="playAgainBtn">↩ PLAY AGAIN</button>
+  <button class="btn-again" id="exitBtn" style="background:#333;margin-top:8px;">✕ EXIT</button>
 </div>
 
 <script>
@@ -227,14 +228,21 @@ function escHtml(str) {
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-// Play Again — host goes to main menu, players go back to join with pin pre-filled
-document.getElementById("playAgainBtn").onclick = () => {
-  if (isHost) {
-    window.location.href = "/main.html";
-  } else {
-    window.location.href = "/join.html" + (gamePin ? "?pin=" + encodeURIComponent(gamePin) : "");
-  }
-};
+// Host sees Play Again -> main menu. Players see only Exit -> closes tab.
+const playAgainBtn = document.getElementById("playAgainBtn");
+const exitBtn      = document.getElementById("exitBtn");
+
+if (isHost) {
+  // Host: show Play Again, hide Exit
+  playAgainBtn.style.display = "inline-block";
+  exitBtn.style.display      = "none";
+  playAgainBtn.onclick = () => { window.location.href = "/main.html"; };
+} else {
+  // Player: hide Play Again, show Exit
+  playAgainBtn.style.display = "none";
+  exitBtn.style.display      = "inline-block";
+  exitBtn.onclick = () => { window.close(); };
+}
 
 // Confetti
 const canvas = document.getElementById("confettiCanvas");
