@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #000;
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    overflow-x: hidden;
+  }
+
+  /* Confetti canvas */
+  #confettiCanvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .content { position: relative; z-index: 1; width: 100%; max-width: 700px; display: flex; flex-direction: column; align-items: center; }
+
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.5rem, 5vw, 3rem);
+    letter-spacing: 4px;
+    text-align: center;
+    background: linear-gradient(135deg, #ffd700, #ff8c00, #ff2222);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    animation: titleIn 0.8s ease forwards;
+  }
+  @keyframes titleIn { from { opacity:0; transform: translateY(-30px); } to { opacity:1; transform: translateY(0); } }
+
+  .subtitle { color: #660000; font-size: 12px; letter-spacing: 3px; margin-bottom: 40px; }
+
+  /* PODIUM */
+  .podium-wrap {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 40px;
+    width: 100%;
+    max-width: 500px;
+    padding: 0 10px;
+  }
+
+  .podium-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    max-width: 150px;
+    opacity: 0;
+  }
+  .podium-slot.p1 { animation: riseUp 0.7s ease 0.4s forwards; }
+  .podium-slot.p2 { animation: riseUp 0.7s ease 0.7s forwards; }
+  .podium-slot.p3 { animation: riseUp 0.7s ease 1.0s forwards; }
+  @keyframes riseUp { from { opacity:0; transform: translateY(40px); } to { opacity:1; transform: translateY(0); } }
+
+  .p-avatar { font-size: 2.4rem; margin-bottom: 6px; }
+  .p-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-align: center;
+    color: #fff;
+    margin-bottom: 6px;
+    word-break: break-all;
+    max-width: 120px;
+  }
+  .p-score { font-size: 12px; color: #aaa; margin-bottom: 10px; }
+
+  .podium-block {
+    width: 100%;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 900;
+    padding: 14px 0 12px;
+  }
+  .rank-1 .podium-block { background: linear-gradient(180deg, #ffd700, #b8860b); height: 120px; color: #000; }
+  .rank-2 .podium-block { background: linear-gradient(180deg, #c0c0c0, #808080); height: 90px; color: #000; }
+  .rank-3 .podium-block { background: linear-gradient(180deg, #cd7f32, #8b4513); height: 70px; color: #000; }
+
+  /* FULL LEADERBOARD */
+  .leaderboard {
+    width: 100%;
+    max-width: 500px;
+  }
+  .lb-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #660000;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #0a0000;
+    border: 1px solid #1a0000;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    opacity: 0;
+    animation: slideIn 0.4s ease forwards;
+  }
+  .lb-row:nth-child(1) { animation-delay: 1.3s; }
+  .lb-row:nth-child(2) { animation-delay: 1.45s; }
+  .lb-row:nth-child(3) { animation-delay: 1.6s; }
+  .lb-row:nth-child(4) { animation-delay: 1.75s; }
+  .lb-row:nth-child(5) { animation-delay: 1.9s; }
+  .lb-row:nth-child(n+6) { animation-delay: 2.0s; }
+  @keyframes slideIn { from { opacity:0; transform: translateX(-20px); } to { opacity:1; transform: translateX(0); } }
+
+  .lb-row.highlight { border-color: #ff2222; background: #1a0000; }
+  .lb-rank { font-family: 'Orbitron', sans-serif; font-size: 14px; width: 28px; color: #660000; }
+  .lb-avatar { font-size: 1.4rem; }
+  .lb-name { flex: 1; font-size: 14px; color: #ff5555; }
+  .lb-score { font-family: 'Orbitron', sans-serif; font-size: 14px; color: #ffd700; }
+
+  /* Play again button */
+  .btn-again {
+    margin-top: 30px;
+    padding: 14px 36px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    background: #ff2222;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    animation: fadeIn 0.5s ease 2.2s both;
+  }
+  .btn-again:hover { background: #fff; box-shadow: 0 0 20px #ff222299; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+</style>
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+
+<div class="content">
+  <h1>🏆 GAME OVER!</h1>
+  <p class="subtitle">FINAL RESULTS</p>
+
+  <div class="podium-wrap" id="podium"></div>
+
+  <div class="leaderboard">
+    <div class="lb-title">FULL LEADERBOARD</div>
+    <div id="lbList"></div>
+  </div>
+
+  <button class="btn-again" onclick="window.location.href='/main.html'">↩ PLAY AGAIN</button>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const myName = params.get("name") || "";
+const myScore = parseInt(params.get("score") || "0");
+let results = [];
+
+try {
+  results = JSON.parse(decodeURIComponent(params.get("data") || "[]"));
+} catch(e) { results = []; }
+
+// Sort just in case
+results.sort((a, b) => a.rank - b.rank);
+
+// Build podium (top 3 in order: 2nd, 1st, 3rd)
+const podiumEl = document.getElementById("podium");
+const podiumOrder = [results[1], results[0], results[2]];
+const podiumClasses = ["rank-2 p2", "rank-1 p1", "rank-3 p3"];
+
+podiumOrder.forEach((p, i) => {
+  if (!p) return;
+  const rankNum = [2, 1, 3][i];
+  const slot = document.createElement("div");
+  slot.className = `podium-slot ${podiumClasses[i]}`;
+  slot.innerHTML = `
+    <div class="p-avatar">${p.avatar || "🎉"}</div>
+    <div class="p-name">${escHtml(p.name)}</div>
+    <div class="p-score">${p.score} pts</div>
+    <div class="podium-block">${rankNum === 1 ? "🥇" : rankNum === 2 ? "🥈" : "🥉"}</div>
+  `;
+  podiumEl.appendChild(slot);
+});
+
+// Build leaderboard
+const lbList = document.getElementById("lbList");
+results.forEach(p => {
+  const row = document.createElement("div");
+  row.className = "lb-row" + (p.name === myName ? " highlight" : "");
+  row.innerHTML = `
+    <div class="lb-rank">#${p.rank}</div>
+    <div class="lb-avatar">${p.avatar || "🎉"}</div>
+    <div class="lb-name">${escHtml(p.name)}${p.name === myName ? " ◀ YOU" : ""}</div>
+    <div class="lb-score">${p.score}</div>
+  `;
+  lbList.appendChild(row);
+});
+
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// Confetti
+const canvas = document.getElementById("confettiCanvas");
+const ctx = canvas.getContext("2d");
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+const confettiPieces = [];
+const confettiColors = ["#ffd700","#ff2222","#ff8c00","#fff","#22cc55","#3498db"];
+
+for (let i = 0; i < 150; i++) {
+  confettiPieces.push({
+    x: Math.random() * W,
+    y: Math.random() * -H,
+    r: Math.random() * 7 + 3,
+    d: Math.random() * 3 + 1,
+    color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+    tilt: Math.random() * 10 - 10,
+    tiltAngle: 0,
+    tiltInc: Math.random() * 0.07 + 0.05
+  });
+}
+
+function drawConfetti() {
+  ctx.clearRect(0, 0, W, H);
+  confettiPieces.forEach(c => {
+    ctx.beginPath();
+    ctx.lineWidth = c.r / 2;
+    ctx.strokeStyle = c.color;
+    ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
+    ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
+    ctx.stroke();
+  });
+  updateConfetti();
+  requestAnimationFrame(drawConfetti);
+}
+
+function updateConfetti() {
+  confettiPieces.forEach(c => {
+    c.tiltAngle += c.tiltInc;
+    c.y += (Math.cos(c.d) + 3 + c.r / 2) / 2;
+    c.x += Math.sin(c.d);
+    c.tilt = Math.sin(c.tiltAngle) * 15;
+    if (c.y > H) { c.x = Math.random() * W; c.y = -20; }
+  });
+}
+
+drawConfetti();
+window.addEventListener("resize", () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; });
+</script>
+</body>
+</html>
